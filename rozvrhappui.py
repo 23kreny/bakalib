@@ -8,6 +8,7 @@ import wx
 import wx.adv
 import wx.grid
 
+
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -65,6 +66,7 @@ class frameRozvrh(wx.Frame):
         self.Layout()
         # end wxGlade
 
+
 # end of class frameRozvrh
 
 class dialogLogin(wx.Dialog):
@@ -98,6 +100,7 @@ class dialogLogin(wx.Dialog):
         self.Layout()
         # end wxGlade
 
+
 # end of class dialogLogin
 
 class RozvrhApp(wx.App):
@@ -106,6 +109,7 @@ class RozvrhApp(wx.App):
         self.SetTopWindow(self.frameRozvrh)
         self.frameRozvrh.Show()
         return True
+
 
 # end of class RozvrhApp
 

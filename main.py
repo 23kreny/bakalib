@@ -1,10 +1,12 @@
-import wx
 import datetime
-import rozvrhappui
-import rozvrh
-import commonlib
-import bakalib
 
+import wx
+import wx.grid
+
+import bakalib
+import commonlib
+import rozvrh
+import rozvrhappui
 
 default_color = None
 App = rozvrhappui.RozvrhApp()
@@ -17,11 +19,24 @@ def pydt_to_wxdt(date):
     year = date.year
     return wx.DateTime.FromDMY(day=day, month=month - 1, year=year)
 
+
 def wxdt_to_pydt(date):
     date = date.Format("%d/%m/%Y")
     return datetime.datetime.strptime(date, "%d/%m/%Y")
 
-def buttonLogin_handler(event, *args):
+
+def mainwindow_close_handler(event):
+    exit()
+    event.Skip()
+
+
+def login_close_handler(event):
+    dialog.Hide()
+    dialog.textUser.Clear()
+    dialog.textPass.Clear()
+
+
+def button_login_handler(event, *args):
     global default_color
     user = dialog.textUser.GetLineText(0)
     pwd = dialog.textPass.GetLineText(0)
@@ -41,43 +56,44 @@ def buttonLogin_handler(event, *args):
     init_main()
     return App.MainLoop()
 
-def closeLogin_handler(event):
-    dialog.Hide()
-    dialog.textUser.Clear()
-    dialog.textPass.Clear()
 
-def buttonNext_handler(event):
+def button_next_handler(event):
     date = wxdt_to_pydt(App.frameRozvrh.dateWeek.GetValue())
     date = date + datetime.timedelta(days=7)
     updategrid(date.strftime("%Y%m%d"))
     event.Skip()
 
-def buttonPrev_handler(event):
+
+def button_prev_handler(event):
     date = wxdt_to_pydt(App.frameRozvrh.dateWeek.GetValue())
     date = date - datetime.timedelta(days=7)
     updategrid(date.strftime("%Y%m%d"))
     event.Skip()
+
 
 def RozvrhGrid_handler(event, date):
     ret = rozvrh.lessons(date)
     lessoncount = ret[1]
     table_extended = ret[6]
     item = (event.GetRow()) * lessoncount + (event.GetCol() + 1)
-    message = table_extended[item-1]
+    message = table_extended[item - 1]
     if message:
         wx.MessageBox(message, caption="Podrobnosti")
     else:
         wx.MessageBox("Není zde nic k zobrazení", caption="Podrobnosti")
 
+
 def RozvrhGrid_useless_handler(event):
     App.frameRozvrh.RozvrhGrid.ClearSelection()
     event.Skip()
 
-def buttonChangeUser_handler(event):
+
+def button_changeuser_handler(event):
     dialog.textUser.SetBackgroundColour(default_color)
     dialog.textPass.SetBackgroundColour(default_color)
     init_login("arg")
     event.Skip()
+
 
 def updategrid(date=rozvrh.defaultdate):
     default_color = App.frameRozvrh.RozvrhGrid.GetCellBackgroundColour(0, 0)
@@ -112,6 +128,7 @@ def updategrid(date=rozvrh.defaultdate):
     App.frameRozvrh.RozvrhGrid.AutoSize()
     App.frameRozvrh.RozvrhGrid.Update()
 
+
 def init_main(date=rozvrh.defaultdate):
     ret = rozvrh.lessons(date)
     weekmonday = ret[0]
@@ -124,11 +141,12 @@ def init_main(date=rozvrh.defaultdate):
 
     App.frameRozvrh.SetMinSize((640, 480))
 
-    App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, buttonNext_handler)
-    App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, buttonPrev_handler)
-    App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, buttonChangeUser_handler)
+    App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, button_next_handler)
+    App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, button_prev_handler)
+    App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, button_changeuser_handler)
     App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date))
     App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_RANGE_SELECT, RozvrhGrid_useless_handler)
+    App.frameRozvrh.Bind(wx.EVT_CLOSE, mainwindow_close_handler)
 
     wxdate = wx.DateTime.FromDMY(weekmonday.day, weekmonday.month - 1, weekmonday.year)
     App.frameRozvrh.dateWeek.SetValue(wxdate)
@@ -153,14 +171,15 @@ def init_main(date=rozvrh.defaultdate):
     App.frameRozvrh.RozvrhGrid.Update()
     App.MainLoop()
 
+
 def init_login(*args):
     dialog.textUser.SetHint('Uživatelské jméno: ')
     dialog.textPass.SetHint('Heslo: ')
     if args:
-        dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: buttonLogin_handler(event, args))
+        dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:
-        dialog.buttonLogin.Bind(wx.EVT_BUTTON, buttonLogin_handler)
-    dialog.Bind(wx.EVT_CLOSE, closeLogin_handler)
+        dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
+    dialog.Bind(wx.EVT_CLOSE, login_close_handler)
     dialog.Show()
 
 

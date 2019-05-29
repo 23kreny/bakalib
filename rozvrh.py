@@ -1,4 +1,5 @@
 import datetime
+
 import bakalib
 
 defaultdate = datetime.date.today().strftime("%Y%m%d")
@@ -48,12 +49,15 @@ def lessons(date=defaultdate):
             % (den["zkratka"], datum.strftime("%d. %m.").lstrip("0").replace(" 0", ""))
         )
         for hod in den["hodiny"]["hod"]:
-            try:
-                table.append(
-                    "%s\n%s\n%s" % (hod["zkrpr"], hod["zkruc"], hod["zkrmist"])
-                )
-            except KeyError:
-                table.append("")
+            tempstr = ""
+            if "zkrpr" in hod:
+                tempstr = tempstr + ("%s" % (hod["zkrpr"]))
+            if "zkruc" in hod:
+                tempstr = tempstr + ("\n%s" % (hod["zkruc"]))
+            if "zkrmist" in hod:
+                if hod["zkrmist"] is not None:
+                    tempstr = tempstr + ("\n%s" % (hod["zkrmist"]))
+            table.append(tempstr)
             if "chng" in hod and hod["chng"] is not None:
                 table_chng_col.append(
                     (100, 0, 0)

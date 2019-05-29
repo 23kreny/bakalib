@@ -1,16 +1,30 @@
-import hashlib
 import base64
 import datetime
-import xml.etree.ElementTree as ET
+import hashlib
 import json
-import requests
+
 import bs4
-import xmltodict
+import requests
 import urllib3
+import xmltodict
+
 import commonlib
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 domain = "prumyslovka.bakalari.cz:446/bakaweb"
+
+
+def getcities():
+    url = "https://sluzby.bakalari.cz/api/v1/municipality"
+    requests.get(url)
+
+
+def getschools(city):
+    pass
+
+
+def getdomain(school):
+    pass
 
 
 def generate_token_permanent(*args):
