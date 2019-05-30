@@ -41,18 +41,37 @@ def button_login_handler(event, *args):
     global default_color
     user = dialog.textUser.GetLineText(0)
     pwd = dialog.textPass.GetLineText(0)
+    domain = dialog.textUrl.GetLineText(0)
+    firstrun = True
+    if commonlib.auth_file_path.is_file():
+        firstrun = False
     if default_color is None:
         default_color = dialog.textUser.GetBackgroundColour()
     dialog.textUser.SetBackgroundColour(default_color)
     dialog.textPass.SetBackgroundColour(default_color)
-    if bakalib.generate_token_permanent(user, pwd) is None:
+    dialog.cityComboBox.SetBackgroundColour(default_color)
+    dialog.schoolComboBox.SetBackgroundColour(default_color)
+    token_resp = bakalib.generate_token_permanent(domain, user, pwd)
+    if token_resp == "wrong username":
+        dialog.textUser.SetBackgroundColour((255, 0, 0))
+        return init_login(args)
+    if token_resp == "wrong password":
+        dialog.textPass.SetBackgroundColour((255, 0, 0))
+        return init_login(args)
+    if token_resp == "wrong username and password":
         dialog.textUser.SetBackgroundColour((255, 0, 0))
         dialog.textPass.SetBackgroundColour((255, 0, 0))
+        return init_login(args)
+    if token_resp == "wrong domain":
+        if not dialog.schoolComboBox.GetValue():
+            dialog.schoolComboBox.SetBackgroundColour((255, 0, 0))
+        if not dialog.cityComboBox.GetValue():
+            dialog.cityComboBox.SetBackgroundColour((255, 0, 0))
         return init_login(args)
     dialog.Hide()
     dialog.textUser.Clear()
     dialog.textPass.Clear()
-    if args:
+    if not firstrun:
         return updategrid()
     init_main()
     App.MainLoop()
@@ -61,16 +80,21 @@ def button_login_handler(event, *args):
 
 def combobox_city_handler(event, city):
     dialog.schoolComboBox.Clear()
-    for school in bakalib.getschools(city):
-        dialog.schoolComboBox.Append(school)
-    dialog.schoolComboBox.Bind(wx.EVT_COMBOBOX, lambda event: combobox_school_handler(event, school))
-    dialog.schoolComboBox.Enable()
+    dialog.textUrl.Clear()
+    schools = bakalib.getschools(city)
+    for school in schools:
+        dialog.schoolComboBox.Append(school["name"])
+    dialog.schoolComboBox.Bind(
+        wx.EVT_COMBOBOX, lambda event: combobox_school_handler(event, schools, dialog.schoolComboBox.GetValue())
+    )
     event.Skip()
 
 
-def combobox_school_handler(event, school, city):
-    print(school, "\n", city)
-    dialog.textUrl.SetValue(bakalib.getdomain(school, city))
+def combobox_school_handler(event, school, schoolname):
+    try:
+        dialog.textUrl.SetValue(bakalib.getdomain(school, schoolname))
+    except TypeError:
+        pass
     event.Skip()
 
 
@@ -144,6 +168,7 @@ def updategrid(date=rozvrh.defaultdate):
     App.frameRozvrh.statusbar.SetStatusText(nazevcyklu.capitalize())
     App.frameRozvrh.RozvrhGrid.AutoSize()
     App.frameRozvrh.RozvrhGrid.Update()
+    App.frameRozvrh.Layout()
 
 
 def init_main(date=rozvrh.defaultdate):
@@ -186,6 +211,7 @@ def init_main(date=rozvrh.defaultdate):
     App.frameRozvrh.statusbar.SetStatusText(nazevcyklu.capitalize())
     App.frameRozvrh.RozvrhGrid.AutoSize()
     App.frameRozvrh.RozvrhGrid.Update()
+    App.frameRozvrh.Layout()
     App.MainLoop()
 
 
@@ -195,16 +221,15 @@ def init_login(*args):
     dialog.textPass.SetHint('Heslo: ')
     dialog.cityComboBox.SetHint("Město: ")
     dialog.schoolComboBox.SetHint("Škola: ")
-    dialog.schoolComboBox.Disable()
-    cities = bakalib.getcities()
-    dialog.cityComboBox.SetItems(cities)
-    dialog.cityComboBox.Bind(
-        wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
-    )
     if args:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
+        cities = bakalib.getcities()
+        dialog.cityComboBox.SetItems(cities)
+    dialog.cityComboBox.Bind(
+        wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
+    )
     dialog.Bind(wx.EVT_CLOSE, login_close_handler)
     dialog.Update()
     dialog.Show()
