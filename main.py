@@ -34,6 +34,7 @@ def login_close_handler(event):
     dialog.Hide()
     dialog.textUser.Clear()
     dialog.textPass.Clear()
+    event.Skip()
 
 
 def button_login_handler(event, *args):
@@ -47,14 +48,30 @@ def button_login_handler(event, *args):
     if bakalib.generate_token_permanent(user, pwd) is None:
         dialog.textUser.SetBackgroundColour((255, 0, 0))
         dialog.textPass.SetBackgroundColour((255, 0, 0))
-        return init_login()
+        return init_login(args)
     dialog.Hide()
     dialog.textUser.Clear()
     dialog.textPass.Clear()
     if args:
         return updategrid()
     init_main()
-    return App.MainLoop()
+    App.MainLoop()
+    event.Skip()
+
+
+def combobox_city_handler(event, city):
+    dialog.schoolComboBox.Clear()
+    for school in bakalib.getschools(city):
+        dialog.schoolComboBox.Append(school)
+    dialog.schoolComboBox.Bind(wx.EVT_COMBOBOX, lambda event: combobox_school_handler(event, school))
+    dialog.schoolComboBox.Enable()
+    event.Skip()
+
+
+def combobox_school_handler(event, school, city):
+    print(school, "\n", city)
+    dialog.textUrl.SetValue(bakalib.getdomain(school, city))
+    event.Skip()
 
 
 def button_next_handler(event):
@@ -173,13 +190,23 @@ def init_main(date=rozvrh.defaultdate):
 
 
 def init_login(*args):
+    dialog.SetSize((400, 350))
     dialog.textUser.SetHint('Uživatelské jméno: ')
     dialog.textPass.SetHint('Heslo: ')
+    dialog.cityComboBox.SetHint("Město: ")
+    dialog.schoolComboBox.SetHint("Škola: ")
+    dialog.schoolComboBox.Disable()
+    cities = bakalib.getcities()
+    dialog.cityComboBox.SetItems(cities)
+    dialog.cityComboBox.Bind(
+        wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
+    )
     if args:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
     dialog.Bind(wx.EVT_CLOSE, login_close_handler)
+    dialog.Update()
     dialog.Show()
 
 

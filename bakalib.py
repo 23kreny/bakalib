@@ -7,39 +7,60 @@ import bs4
 import requests
 import urllib3
 import xmltodict
+from lxml import etree
 
 import commonlib
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-domain = "prumyslovka.bakalari.cz:446/bakaweb"
 
 
 def getcities():
     url = "https://sluzby.bakalari.cz/api/v1/municipality"
-    requests.get(url)
+    citylist = []
+    r = requests.get(url, stream=True)
+    r.raw.decode_content = True
+    events = etree.iterparse(r.raw)
+    for event, elem in events:
+        if elem.tag == "name":
+            if elem.text is not None:
+                citylist.append(elem.text)
+    return citylist
 
 
 def getschools(city):
-    pass
+    url = "https://sluzby.bakalari.cz/api/v1/municipality/" + requests.utils.quote(city)
+    schoollist = []
+    r = requests.get(url)
+    soup = bs4.BeautifulSoup(r.content, "html.parser")
+    xml = soup.encode("utf-8")
+    xmldict = xmltodict.parse(xml)
+    jsonxml = json.loads(json.dumps(xmldict, indent=4, sort_keys=True))
+    try:
+        for school in jsonxml["municipality"]["schools"]["schoolinfo"]:
+            schoollist.append(school["name"])
+    except (IndexError, TypeError):
+        schoollist.append(jsonxml["municipality"]["schools"]["schoolinfo"]["name"])
+    return schoollist
 
 
-def getdomain(school):
-    pass
+def getdomain(school, city):
+    url = "https://sluzby.bakalari.cz/api/v1/municipality/" + requests.utils.quote(city)
+    r = requests.get(url)
 
 
-def generate_token_permanent(*args):
+def generate_token_permanent(domain, *args):
     if not args:
-        user = input("Username: ")
-        pwd = input("Password: ")
-        if user == "" or pwd == "":
-            print("Cannot be empty")
-            return generate_token_permanent()
+        return None
     else:
-        user = args[0]
-        pwd = args[1]
+        try:
+            user = args[0]
+            pwd = args[1]
+        except IndexError:
+            return None
     if user == "" or pwd == "":
         return None
-    r = requests.get("https://" + domain + "/login.aspx?gethx=" + user)
+    params = {"gethx": user}
+    r = requests.get(url=domain, params=params)
     soup = bs4.BeautifulSoup(r.content, "html.parser")
     xml = soup.encode("utf-8")
     xmldict = xmltodict.parse(xml)
@@ -50,7 +71,10 @@ def generate_token_permanent(*args):
     hashstring = (salt + pwd).encode("utf-8")
     hashpass = base64.b64encode(hashlib.sha512(hashstring).digest())
     permtoken = "*login*" + user + "*pwd*" + hashpass.decode("utf8") + "*sgn*ANDR"
-    json_auth = {"PermToken": permtoken}
+    json_auth = {
+        "Domain": domain,
+        "PermToken": permtoken
+    }
     if not commonlib.conf_dir.is_dir():
         commonlib.conf_dir.mkdir()
     with open(commonlib.auth_file, "w") as f:
@@ -63,8 +87,7 @@ def generate_token_permanent(*args):
 
 def generate_token():
     if not commonlib.auth_file_path.is_file():
-        print("Permanent token not found, generating...")
-        permtoken = generate_token_permanent()["PermToken"]
+        return None
     else:
         with open(commonlib.auth_file, "r") as f:
             permtoken = json.load(f)["PermToken"]
@@ -82,7 +105,8 @@ def istoken_valid():
 
 
 def request(*args):
-    url = "https://" + domain + "/login.aspx"
+    with open(commonlib.auth_file, "r") as f:
+        domain = json.load(f)["Domain"]
     params = {"hx": generate_token()}
     if args is None or len(args) > 2:
         print("not enough or too many params")
@@ -90,7 +114,7 @@ def request(*args):
     params.update({"pm": args[0]})
     if len(args) > 1:
         params.update({"pmd": args[1]})
-    r = requests.get(url=url, params=params, verify=False)
+    r = requests.get(url=domain, params=params, verify=False)
     soup = bs4.BeautifulSoup(r.content, "html.parser")
     xml = soup.encode("utf-8")
     xmldict = xmltodict.parse(xml)
