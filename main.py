@@ -40,9 +40,9 @@ def login_close_handler(event):
 
 def button_login_handler(event, *args):
     global default_color
-    user = dialog.textUser.GetLineText(0)
-    pwd = dialog.textPass.GetLineText(0)
-    domain = dialog.textUrl.GetLineText(0)
+    user = dialog.textUser
+    pwd = dialog.textPass
+    domain = dialog.textUrl
     firstrun = True
     if commonlib.auth_file_path.is_file():
         firstrun = False
@@ -50,9 +50,13 @@ def button_login_handler(event, *args):
         default_color = dialog.textUser.GetBackgroundColour()
     dialog.textUser.SetBackgroundColour(default_color)
     dialog.textPass.SetBackgroundColour(default_color)
-    dialog.cityComboBox.SetBackgroundColour(default_color)
-    dialog.schoolComboBox.SetBackgroundColour(default_color)
-    token_resp = bakalib.generate_token_permanent(domain, user, pwd)
+    dialog.textUrl.SetBackgroundColour(default_color)
+    for count, arg in enumerate((user, pwd, domain)):
+        if not arg.GetLineText(0):
+            arg.SetBackgroundColour((255, 0, 0))
+            if count == 2:
+                return init_login(args)
+    token_resp = bakalib.generate_token_permanent(domain.GetLineText(0), user.GetLineText(0), pwd.GetLineText(0))
     if token_resp == "wrong username":
         dialog.textUser.SetBackgroundColour((255, 0, 0))
         return init_login(args)
@@ -60,16 +64,19 @@ def button_login_handler(event, *args):
         dialog.textPass.SetBackgroundColour((255, 0, 0))
         return init_login(args)
     if token_resp == "wrong domain":
-        if not dialog.schoolComboBox.GetValue():
-            dialog.schoolComboBox.SetBackgroundColour((255, 0, 0))
-        if not dialog.cityComboBox.GetValue():
-            dialog.cityComboBox.SetBackgroundColour((255, 0, 0))
+        dialog.textUrl.SetBackgroundColour((255, 0, 0))
         return init_login(args)
     dialog.Hide()
     dialog.textUser.Clear()
     dialog.textPass.Clear()
+    credtitle = "Zpracování údajů"
+    credmessage = "Vaše údaje jsou ukládány ve formátu: " \
+                  "\n\n{\n    'Domain': '" + domain.GetLineText(0) + "'\n    'PermToken': '" + token_resp + "'\n}\n\n" \
+                                                                                                            "Heslo je zde bezpečně zašifrované.\nSoubor naleznete v " + commonlib.auth_file.rstrip(
+        "auth.json")
     if not firstrun:
         return updategrid()
+    wx.MessageBox(credmessage, credtitle)
     init_main()
     App.MainLoop()
     event.Skip()
@@ -78,6 +85,7 @@ def button_login_handler(event, *args):
 def combobox_city_handler(event, city):
     dialog.cityComboBox.SetBackgroundColour(default_color)
     dialog.schoolComboBox.Clear()
+    dialog.schoolComboBox.Enable()
     dialog.textUrl.Clear()
     schools = bakalib.getschools(city)
     for school in schools:
@@ -111,7 +119,7 @@ def button_prev_handler(event):
     event.Skip()
 
 
-def RozvrhGrid_handler(event, date, lessoncount, table_extended):
+def RozvrhGrid_handler(event, lessoncount, table_extended):
     item = (event.GetRow()) * lessoncount + (event.GetCol() + 1)
     message = table_extended[item - 1]
     if message:
@@ -141,7 +149,6 @@ def button_changeuser_handler(event):
 
 
 def updategrid(date=rozvrh.defaultdate):
-    default_color = App.frameRozvrh.RozvrhGrid.GetCellBackgroundColour(0, 0)
     App.frameRozvrh.RozvrhGrid.ClearGrid()
     for row in range(App.frameRozvrh.RozvrhGrid.GetNumberRows()):
         for col in range(App.frameRozvrh.RozvrhGrid.GetNumberCols()):
@@ -160,7 +167,7 @@ def updategrid(date=rozvrh.defaultdate):
     wxdate = wx.DateTime.FromDMY(weekmonday.day, weekmonday.month - 1, weekmonday.year)
     App.frameRozvrh.dateWeek.SetValue(wxdate)
     App.frameRozvrh.RozvrhGrid.Bind(
-        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date, lessoncount, table_extended)
+        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, lessoncount, table_extended)
     )
     for col in range(len(columns_lessoncaptions)):
         App.frameRozvrh.RozvrhGrid.SetColLabelValue(col, columns_lessoncaptions[col])
@@ -190,12 +197,13 @@ def init_main(date=rozvrh.defaultdate):
     nazevcyklu = ret[7]
 
     App.frameRozvrh.SetMinSize((640, 480))
+    App.frameRozvrh.SetMaxSize((-1, 540))
 
     App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, button_next_handler)
     App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, button_prev_handler)
     App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, button_changeuser_handler)
     App.frameRozvrh.RozvrhGrid.Bind(
-        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date, lessoncount, table_extended)
+        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, lessoncount, table_extended)
     )
     App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_RANGE_SELECT, RozvrhGrid_useless_handler)
     App.frameRozvrh.Bind(wx.EVT_CLOSE, mainwindow_close_handler)
@@ -226,11 +234,8 @@ def init_main(date=rozvrh.defaultdate):
 
 
 def init_login(*args):
-    dialog.SetSize((400, 350))
-    dialog.textUser.SetHint('Uživatelské jméno: ')
-    dialog.textPass.SetHint('Heslo: ')
-    dialog.cityComboBox.SetHint("Město: ")
-    dialog.schoolComboBox.SetHint("Škola: ")
+    dialog.SetSize((300, 365))
+    dialog.schoolComboBox.Disable()
     if args:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:

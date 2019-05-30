@@ -60,7 +60,7 @@ def lessons(date=defaultdate):
             table.append(tempstr)
             if "chng" in hod and hod["chng"] is not None:
                 table_chng_col.append(
-                    (100, 0, 0)
+                    (255, 0, 0)
                 )
             else:
                 table_chng_col.append(None)
