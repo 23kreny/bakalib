@@ -222,15 +222,15 @@ def init_login(*args):
     dialog.textPass.SetHint('Heslo: ')
     dialog.cityComboBox.SetHint("Město: ")
     dialog.schoolComboBox.SetHint("Škola: ")
+    cities = bakalib.getcities()
+    dialog.cityComboBox.SetItems(cities)
+    dialog.cityComboBox.Bind(
+        wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
+    )
     if args:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
-        cities = bakalib.getcities()
-        dialog.cityComboBox.SetItems(cities)
-    dialog.cityComboBox.Bind(
-        wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
-    )
     dialog.Bind(wx.EVT_CLOSE, login_close_handler)
     dialog.Update()
     dialog.Show()
