@@ -88,7 +88,7 @@ def generate_token_permanent(domain, *args):
     if not istoken_valid():
         commonlib.auth_file_path.unlink()
         return "wrong password"
-    return permtoken
+    return json.dumps(json_auth, indent=4, sort_keys=True)
 
 
 def generate_token():

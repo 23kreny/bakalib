@@ -38,7 +38,7 @@ def login_close_handler(event):
     event.Skip()
 
 
-def button_login_handler(event, *args):
+def button_login_handler(event):
     global default_color
     user = dialog.textUser
     pwd = dialog.textPass
@@ -55,25 +55,23 @@ def button_login_handler(event, *args):
         if not arg.GetLineText(0):
             arg.SetBackgroundColour((255, 0, 0))
             if count == 2:
-                return init_login(args)
+                return dialog.Refresh()
     token_resp = bakalib.generate_token_permanent(domain.GetLineText(0), user.GetLineText(0), pwd.GetLineText(0))
-    if token_resp == "wrong username":
-        dialog.textUser.SetBackgroundColour((255, 0, 0))
-        return init_login(args)
-    if token_resp == "wrong password":
-        dialog.textPass.SetBackgroundColour((255, 0, 0))
-        return init_login(args)
-    if token_resp == "wrong domain":
-        dialog.textUrl.SetBackgroundColour((255, 0, 0))
-        return init_login(args)
+    if token_resp.startswith("wrong"):
+        if token_resp == "wrong username":
+            dialog.textUser.SetBackgroundColour((255, 0, 0))
+        if token_resp == "wrong password":
+            dialog.textPass.SetBackgroundColour((255, 0, 0))
+        if token_resp == "wrong domain":
+            dialog.textUrl.SetBackgroundColour((255, 0, 0))
+        return dialog.Refresh()
     dialog.Hide()
     dialog.textUser.Clear()
     dialog.textPass.Clear()
     credtitle = "Zpracování údajů"
-    credmessage = "Vaše údaje jsou ukládány ve formátu: " \
-                  "\n\n{\n    'Domain': '" + domain.GetLineText(0) + "'\n    'PermToken': '" + token_resp + "'\n}\n\n" \
-                                                                                                            "Heslo je zde bezpečně zašifrované.\nSoubor naleznete v " + commonlib.auth_file.rstrip(
-        "auth.json")
+    credmessage = "Vaše údaje jsou ukládány ve formátu: \n\n%s\n\n" \
+                  "Heslo je zde bezpečně zašifrováno.\nSoubor naleznete v %s" \
+                  % (token_resp, commonlib.auth_file.rstrip("auth.json"))
     if not firstrun:
         return updategrid()
     wx.MessageBox(credmessage, credtitle)
@@ -143,8 +141,7 @@ def button_changeuser_handler(event):
     dialog.cityComboBox.Clear()
     dialog.schoolComboBox.Clear()
     dialog.textUrl.Clear()
-    dialog.cityComboBox.SetItems(bakalib.getcities())
-    init_login("arg")
+    init_login()
     event.Skip()
 
 
@@ -233,14 +230,11 @@ def init_main(date=rozvrh.defaultdate):
     App.MainLoop()
 
 
-def init_login(*args):
+def init_login():
     dialog.SetSize((300, 365))
     dialog.schoolComboBox.Disable()
-    if args:
-        dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
-    else:
-        dialog.cityComboBox.SetItems(bakalib.getcities())
-        dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
+    dialog.cityComboBox.SetItems(bakalib.getcities())
+    dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
     dialog.cityComboBox.Bind(
         wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
     )
