@@ -60,10 +60,10 @@ def generate_token_permanent(domain, *args):
             pwd = args[1]
         except IndexError:
             return None
-    if not user or not pwd:
-        return "wrong username and password"
     if not domain:
         return "wrong domain"
+    if not user or not pwd:
+        return "wrong username"
     params = {"gethx": user}
     url = "https://" + domain + "/login.aspx"
     r = requests.get(url=url, params=params)

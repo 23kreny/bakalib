@@ -59,10 +59,6 @@ def button_login_handler(event, *args):
     if token_resp == "wrong password":
         dialog.textPass.SetBackgroundColour((255, 0, 0))
         return init_login(args)
-    if token_resp == "wrong username and password":
-        dialog.textUser.SetBackgroundColour((255, 0, 0))
-        dialog.textPass.SetBackgroundColour((255, 0, 0))
-        return init_login(args)
     if token_resp == "wrong domain":
         if not dialog.schoolComboBox.GetValue():
             dialog.schoolComboBox.SetBackgroundColour((255, 0, 0))
@@ -80,6 +76,7 @@ def button_login_handler(event, *args):
 
 
 def combobox_city_handler(event, city):
+    dialog.cityComboBox.SetBackgroundColour(default_color)
     dialog.schoolComboBox.Clear()
     dialog.textUrl.Clear()
     schools = bakalib.getschools(city)
@@ -92,6 +89,7 @@ def combobox_city_handler(event, city):
 
 
 def combobox_school_handler(event, school, schoolname):
+    dialog.schoolComboBox.SetBackgroundColour(default_color)
     try:
         dialog.textUrl.SetValue(bakalib.getdomain(school, schoolname))
     except TypeError:
@@ -133,6 +131,14 @@ def RozvrhGrid_useless_handler(event):
 def button_changeuser_handler(event):
     dialog.textUser.SetBackgroundColour(default_color)
     dialog.textPass.SetBackgroundColour(default_color)
+    dialog.cityComboBox.SetBackgroundColour(default_color)
+    dialog.schoolComboBox.SetBackgroundColour(default_color)
+    dialog.textUser.Clear()
+    dialog.textPass.Clear()
+    dialog.cityComboBox.Clear()
+    dialog.schoolComboBox.Clear()
+    dialog.textUrl.Clear()
+    dialog.cityComboBox.SetItems(bakalib.getcities())
     init_login("arg")
     event.Skip()
 
@@ -222,12 +228,10 @@ def init_login(*args):
     dialog.textPass.SetHint('Heslo: ')
     dialog.cityComboBox.SetHint("Město: ")
     dialog.schoolComboBox.SetHint("Škola: ")
-    if not dialog.cityComboBox.GetValue():
-        cities = bakalib.getcities()
-        dialog.cityComboBox.SetItems(cities)
     if args:
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, lambda event: button_login_handler(event, args))
     else:
+        dialog.cityComboBox.SetItems(bakalib.getcities())
         dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
     dialog.cityComboBox.Bind(
         wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
