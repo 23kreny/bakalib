@@ -1,4 +1,5 @@
 import datetime
+import sys
 
 import wx
 import wx.grid
@@ -26,8 +27,8 @@ def wxdt_to_pydt(date):
 
 
 def mainwindow_close_handler(event):
-    exit()
     event.Skip()
+    sys.exit()
 
 
 def login_close_handler(event):
