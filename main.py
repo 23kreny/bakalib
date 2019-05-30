@@ -111,10 +111,7 @@ def button_prev_handler(event):
     event.Skip()
 
 
-def RozvrhGrid_handler(event, date):
-    ret = rozvrh.lessons(date)
-    lessoncount = ret[1]
-    table_extended = ret[6]
+def RozvrhGrid_handler(event, date, lessoncount, table_extended):
     item = (event.GetRow()) * lessoncount + (event.GetCol() + 1)
     message = table_extended[item - 1]
     if message:
@@ -157,11 +154,14 @@ def updategrid(date=rozvrh.defaultdate):
     rows_days = ret[3]
     table = ret[4]
     table_chng_col = ret[5]
+    table_extended = ret[6]
     nazevcyklu = ret[7]
 
     wxdate = wx.DateTime.FromDMY(weekmonday.day, weekmonday.month - 1, weekmonday.year)
     App.frameRozvrh.dateWeek.SetValue(wxdate)
-    App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date))
+    App.frameRozvrh.RozvrhGrid.Bind(
+        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date, lessoncount, table_extended)
+    )
     for col in range(len(columns_lessoncaptions)):
         App.frameRozvrh.RozvrhGrid.SetColLabelValue(col, columns_lessoncaptions[col])
     for row in range(len(rows_days)):
@@ -185,6 +185,7 @@ def init_main(date=rozvrh.defaultdate):
     columns_lessoncaptions = ret[2]
     rows_days = ret[3]
     table = ret[4]
+    table_extended = ret[6]
     table_chng_col = ret[5]
     nazevcyklu = ret[7]
 
@@ -193,7 +194,9 @@ def init_main(date=rozvrh.defaultdate):
     App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, button_next_handler)
     App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, button_prev_handler)
     App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, button_changeuser_handler)
-    App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date))
+    App.frameRozvrh.RozvrhGrid.Bind(
+        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, date, lessoncount, table_extended)
+    )
     App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_RANGE_SELECT, RozvrhGrid_useless_handler)
     App.frameRozvrh.Bind(wx.EVT_CLOSE, mainwindow_close_handler)
 
