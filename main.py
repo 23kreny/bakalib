@@ -41,6 +41,7 @@ def button_login_handler(event):
                   "Heslo je zde bezpečně zašifrováno.\nSoubor naleznete v %s" \
                   % (token_resp, commonlib.auth_file.rstrip("auth.json"))
     wx.MessageBox(credmessage, credtitle)
+    init_main()
     event.Skip()
 
 
