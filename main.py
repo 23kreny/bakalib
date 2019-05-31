@@ -146,11 +146,6 @@ def button_changeuser_handler(event):
 
 
 def updategrid(date=rozvrh.defaultdate):
-    App.frameRozvrh.RozvrhGrid.ClearGrid()
-    for row in range(App.frameRozvrh.RozvrhGrid.GetNumberRows()):
-        for col in range(App.frameRozvrh.RozvrhGrid.GetNumberCols()):
-            App.frameRozvrh.RozvrhGrid.SetCellBackgroundColour(row, col, default_color)
-
     ret = rozvrh.lessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
@@ -160,6 +155,15 @@ def updategrid(date=rozvrh.defaultdate):
     table_chng_col = ret[5]
     table_extended = ret[6]
     nazevcyklu = ret[7]
+    App.frameRozvrh.RozvrhGrid.ClearGrid()
+
+    if lessoncount != App.frameRozvrh.RozvrhGrid.GetNumberCols() != 0:
+        App.frameRozvrh.RozvrhGrid.DeleteCols(numCols=App.frameRozvrh.RozvrhGrid.GetNumberCols())
+        App.frameRozvrh.RozvrhGrid.AppendCols(lessoncount)
+
+    for row in range(App.frameRozvrh.RozvrhGrid.GetNumberRows()):
+        for col in range(App.frameRozvrh.RozvrhGrid.GetNumberCols()):
+            App.frameRozvrh.RozvrhGrid.SetCellBackgroundColour(row, col, default_color)
 
     wxdate = wx.DateTime.FromDMY(weekmonday.day, weekmonday.month - 1, weekmonday.year)
     App.frameRozvrh.dateWeek.SetValue(wxdate)
@@ -196,15 +200,6 @@ def init_main(date=rozvrh.defaultdate):
     App.frameRozvrh.SetMinSize((640, 480))
     App.frameRozvrh.SetMaxSize((-1, 540))
 
-    App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, button_next_handler)
-    App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, button_prev_handler)
-    App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, button_changeuser_handler)
-    App.frameRozvrh.RozvrhGrid.Bind(
-        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, lessoncount, table_extended)
-    )
-    App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_RANGE_SELECT, RozvrhGrid_useless_handler)
-    App.frameRozvrh.Bind(wx.EVT_CLOSE, mainwindow_close_handler)
-
     wxdate = wx.DateTime.FromDMY(weekmonday.day, weekmonday.month - 1, weekmonday.year)
     App.frameRozvrh.dateWeek.SetValue(wxdate)
     App.frameRozvrh.RozvrhGrid.SetDefaultCellAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
@@ -222,6 +217,14 @@ def init_main(date=rozvrh.defaultdate):
             App.frameRozvrh.RozvrhGrid.SetCellBackgroundColour(row, col, table_chng_col[0])
             table.remove(table[0])
             table_chng_col.remove(table_chng_col[0])
+    App.frameRozvrh.buttonNext.Bind(wx.EVT_BUTTON, button_next_handler)
+    App.frameRozvrh.buttonPrev.Bind(wx.EVT_BUTTON, button_prev_handler)
+    App.frameRozvrh.buttonChangeUser.Bind(wx.EVT_BUTTON, button_changeuser_handler)
+    App.frameRozvrh.RozvrhGrid.Bind(
+        wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: RozvrhGrid_handler(event, lessoncount, table_extended)
+    )
+    App.frameRozvrh.RozvrhGrid.Bind(wx.grid.EVT_GRID_RANGE_SELECT, RozvrhGrid_useless_handler)
+    App.frameRozvrh.Bind(wx.EVT_CLOSE, mainwindow_close_handler)
 
     App.frameRozvrh.statusbar.SetStatusText(nazevcyklu.capitalize())
     App.frameRozvrh.RozvrhGrid.AutoSize()
