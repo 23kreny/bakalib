@@ -6,8 +6,8 @@ import wx.grid
 
 import bakalib
 import commonlib
-import rozvrh
-import rozvrhappui
+from rozvrh import rozvrhappui
+from rozvrh import rozvrhlib
 
 default_color = None
 App = rozvrhappui.RozvrhApp()
@@ -145,8 +145,8 @@ def button_changeuser_handler(event):
     event.Skip()
 
 
-def updategrid(date=rozvrh.defaultdate):
-    ret = rozvrh.lessons(date)
+def updategrid(date=rozvrhlib.defaultdate):
+    ret = rozvrhlib.lessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
     columns_lessoncaptions = ret[2]
@@ -186,8 +186,8 @@ def updategrid(date=rozvrh.defaultdate):
     App.frameRozvrh.Layout()
 
 
-def init_main(date=rozvrh.defaultdate):
-    ret = rozvrh.lessons(date)
+def init_main(date=rozvrhlib.defaultdate):
+    ret = rozvrhlib.lessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
     columns_lessoncaptions = ret[2]
