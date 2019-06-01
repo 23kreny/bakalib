@@ -5,26 +5,6 @@ import bakalib
 defaultdate = datetime.date.today().strftime("%Y%m%d")
 
 
-def pocethodin(date=defaultdate):
-    result = ""
-    content = bakalib.request("rozvrh", date)
-    for dny in content["results"]["rozvrh"]["dny"]["den"]:
-        for hodiny in dny["hodiny"]["hod"]:
-            if "idcode" and "caption" in hodiny.keys():
-                if hodiny["idcode"].startswith(date):
-                    result = hodiny["caption"]
-    return result
-
-
-def endtime(lastlesson, date=defaultdate):
-    result = ""
-    content = bakalib.request("rozvrh", date)
-    for times in content["results"]["rozvrh"]["hodiny"]["hod"]:
-        if times["caption"] == lastlesson:
-            result = times["endtime"]
-    return result
-
-
 def lessons(date=defaultdate):
     content = bakalib.request("rozvrh", date)
     weekmonday = datetime.datetime.strptime(
