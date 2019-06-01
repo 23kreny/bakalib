@@ -6,6 +6,9 @@
 
 import wx
 
+import icons
+
+
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -41,17 +44,11 @@ class frameMain(wx.Frame):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.VERTICAL)
         sizer_1 = wx.GridSizer(2, 2, 0, 0)
-        self.buttonRozvrh = wx.StaticBitmap(self, wx.ID_ANY,
-                                            wx.Bitmap("A:\\Git\\Python\\bakalaris\\bitmaps\\rozvrh.png",
-                                                      wx.BITMAP_TYPE_ANY))
+        self.buttonRozvrh = wx.StaticBitmap(self, wx.ID_ANY, icons.rozvrh.GetBitmap())
         sizer_1.Add(self.buttonRozvrh, 0, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 5)
-        self.buttonZnamky = wx.StaticBitmap(self, wx.ID_ANY,
-                                            wx.Bitmap("A:\\Git\\Python\\bakalaris\\bitmaps\\znamky.png",
-                                                      wx.BITMAP_TYPE_ANY))
+        self.buttonZnamky = wx.StaticBitmap(self, wx.ID_ANY, icons.znamky.GetBitmap())
         sizer_1.Add(self.buttonZnamky, 0, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 5)
-        self.buttonAbsence = wx.StaticBitmap(self, wx.ID_ANY,
-                                             wx.Bitmap("A:\\Git\\Python\\bakalaris\\bitmaps\\absence.png",
-                                                       wx.BITMAP_TYPE_ANY))
+        self.buttonAbsence = wx.StaticBitmap(self, wx.ID_ANY, icons.absence.GetBitmap())
         sizer_1.Add(self.buttonAbsence, 0, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 5)
         sizer_1.Add((0, 0), 0, 0, 0)
         sizer.Add(sizer_1, 0, wx.ALIGN_CENTER | wx.ALL, 10)

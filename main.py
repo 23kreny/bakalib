@@ -4,11 +4,20 @@ import wx
 
 import bakalib
 import commonlib
+import icons
 import main_ui
+from rozvrh import rozvrh_main, rozvrh_ui
+
+# from znamky import znamky_main, znamky_ui
+# from absence import absence_main, absence_ui
 
 default_color = None
 App = main_ui.appMain()
 dialog = main_ui.dialogLogin(None, wx.ID_ANY, "")
+icon_main = wx.Icon(icons.bakalaris.GetIcon())
+icon_rozvrh = wx.Icon(icons.rozvrh.GetIcon())
+icon_znamky = wx.Icon(icons.znamky.GetIcon())
+icon_absence = wx.Icon(icons.absence.GetIcon())
 
 
 def button_login_handler(event):
@@ -79,24 +88,24 @@ def main_close_handler(event):
 
 
 def rozvrh_handler(event):
-    App.frameMain.Hide()
-    import rozvrh.rozvrh_main
-    rozvrh.rozvrh_main.init_main()
+    rozvrh_main.App = rozvrh_ui.appRozvrh()
+    rozvrh_main.App.frameRozvrh.SetIcon(icon_rozvrh)
+    rozvrh_main.init_main()
     event.Skip()
 
 
 def znamky_handler(event):
-    '''import znamky.znamky_main
-    znamky.znamky_main.init_main()
-    event.Skip()'''
+    # znamky_main.App = znamky_ui.appZnamky()
+    # znamky_main.App.frameZnamky.SetIcon(icon_znamky)
+    # znamky_main.init_main()
     wx.MessageBox("Něco tu chybí", "WIP")
     event.Skip()
 
 
 def absence_handler(event):
-    '''import absence.absence_main
-        absence.absence_main.init_main()
-        event.Skip()'''
+    # absence_main.App = absence_ui.appZnamky()
+    # absence_main.App.frameAbsence.SetIcon(icon_absence)
+    # absence_main.init_main()
     wx.MessageBox("Něco tu chybí", "WIP")
     event.Skip()
 
@@ -132,6 +141,7 @@ def init_main():
     size = (235, 295)
     App.frameMain.SetMinClientSize(size)
     App.frameMain.SetMaxClientSize(size)
+    App.frameMain.SetIcon(icon_main)
     App.frameMain.buttonRozvrh.Bind(wx.EVT_LEFT_DOWN, rozvrh_handler)
     App.frameMain.buttonZnamky.Bind(wx.EVT_LEFT_DOWN, znamky_handler)
     App.frameMain.buttonAbsence.Bind(wx.EVT_LEFT_DOWN, absence_handler)

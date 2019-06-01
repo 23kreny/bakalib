@@ -1,13 +1,10 @@
 import datetime
-import sys
 
 import wx
 import wx.grid
 
 from rozvrh import rozvrh_ui
 from rozvrh import rozvrhlib
-
-App = rozvrh_ui.appRozvrh()
 
 
 def pydt_to_wxdt(date):
@@ -23,8 +20,8 @@ def wxdt_to_pydt(date):
 
 
 def main_close_handler(event):
+    App.frameRozvrh.Hide()
     event.Skip()
-    sys.exit()
 
 
 def button_next_handler(event):
@@ -142,4 +139,5 @@ def init_main(date=rozvrhlib.defaultdate):
 
 
 if __name__ == "__main__":
+    App = rozvrh_ui.appRozvrh()
     init_main()
