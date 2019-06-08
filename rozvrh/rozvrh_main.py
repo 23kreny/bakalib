@@ -53,7 +53,7 @@ def gridRozvrh_useless_handler(event):
 
 
 def updategrid(date=rozvrhlib.defaultdate):
-    ret = rozvrhlib.lessons(date)
+    ret = rozvrhlib.getlessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
     columns_lessoncaptions = ret[2]
@@ -93,7 +93,7 @@ def updategrid(date=rozvrhlib.defaultdate):
 
 
 def init_main(date=rozvrhlib.defaultdate):
-    ret = rozvrhlib.lessons(date)
+    ret = rozvrhlib.getlessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
     columns_lessoncaptions = ret[2]

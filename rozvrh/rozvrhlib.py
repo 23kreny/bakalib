@@ -5,7 +5,7 @@ import bakalib
 defaultdate = datetime.date.today().strftime("%Y%m%d")
 
 
-def lessons(date=defaultdate):
+def getlessons(date=defaultdate):
     content = bakalib.request("rozvrh", date)
     weekmonday = datetime.datetime.strptime(
         content["results"]["rozvrh"]["dny"]["den"][0]["datum"], "%Y%m%d"
