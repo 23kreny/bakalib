@@ -67,7 +67,3 @@ def getlessons(date=defaultdate):
         table_extended,
         nazev_cyklu,
     )
-
-
-if __name__ == "__main__":
-    pass

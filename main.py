@@ -7,8 +7,8 @@ import commonlib
 import icons
 import main_ui
 from rozvrh import rozvrh_main, rozvrh_ui
+from znamky import znamky_main, znamky_ui
 
-# from znamky import znamky_main, znamky_ui
 # from absence import absence_main, absence_ui
 
 default_color = None
@@ -21,6 +21,8 @@ icon_absence = wx.Icon(icons.absence.GetIcon())
 
 
 def button_login_handler(event):
+    wait = wx.BusyCursor()
+
     global default_color
     user = dialog.textUser
     pwd = dialog.textPass
@@ -50,11 +52,14 @@ def button_login_handler(event):
                   "Heslo je zde bezpečně zašifrováno.\nSoubor naleznete v %s" \
                   % (token_resp, commonlib.auth_file.rstrip("auth.json"))
     wx.MessageBox(credmessage, credtitle)
+    del wait
     init_main()
     event.Skip()
 
 
 def combobox_city_handler(event, city):
+    wait = wx.BusyCursor()
+
     dialog.cityComboBox.SetBackgroundColour(default_color)
     dialog.schoolComboBox.Clear()
     dialog.schoolComboBox.Enable()
@@ -65,6 +70,8 @@ def combobox_city_handler(event, city):
     dialog.schoolComboBox.Bind(
         wx.EVT_COMBOBOX, lambda event: combobox_school_handler(event, schools, dialog.schoolComboBox.GetValue())
     )
+
+    del wait
     event.Skip()
 
 
@@ -83,7 +90,6 @@ def login_close_handler(event):
 
 
 def main_close_handler(event):
-    event.Skip()
     sys.exit()
 
 
@@ -95,10 +101,9 @@ def rozvrh_handler(event):
 
 
 def znamky_handler(event):
-    # znamky_main.App = znamky_ui.appZnamky()
-    # znamky_main.App.frameZnamky.SetIcon(icon_znamky)
-    # znamky_main.init_main()
-    wx.MessageBox("Něco tu chybí", "WIP")
+    znamky_main.App = znamky_ui.appZnamky()
+    znamky_main.App.frameZnamky.SetIcon(icon_znamky)
+    znamky_main.init_main()
     event.Skip()
 
 
@@ -125,6 +130,8 @@ def changeuser_handler(event):
 
 
 def init_login():
+    wait = wx.BusyCursor()
+
     dialog.SetSize((300, 365))
     dialog.schoolComboBox.Disable()
     dialog.cityComboBox.SetItems(bakalib.getcities())
@@ -136,17 +143,27 @@ def init_login():
     dialog.Update()
     dialog.Show()
 
+    del wait
+
 
 def init_main():
+    wait = wx.BusyCursor()
+
     size = (235, 295)
     App.frameMain.SetMinClientSize(size)
-    App.frameMain.SetMaxClientSize(size)
+    App.frameMain.SetMaxClientSize((-1, size[1]))
     App.frameMain.SetIcon(icon_main)
     App.frameMain.buttonRozvrh.Bind(wx.EVT_LEFT_DOWN, rozvrh_handler)
     App.frameMain.buttonZnamky.Bind(wx.EVT_LEFT_DOWN, znamky_handler)
     App.frameMain.buttonAbsence.Bind(wx.EVT_LEFT_DOWN, absence_handler)
     App.frameMain.buttonChangeuser.Bind(wx.EVT_BUTTON, changeuser_handler)
     App.frameMain.Bind(wx.EVT_CLOSE, main_close_handler)
+
+    jmeno, skola = bakalib.getbasicinfo()
+
+    App.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
+
+    del wait
     App.MainLoop()
 
 

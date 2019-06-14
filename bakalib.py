@@ -51,6 +51,11 @@ def getdomain(school, schoolname):
             return domain
 
 
+def getbasicinfo():
+    content = request("login")["results"]
+    return content["jmeno"], content["skola"]
+
+
 def generate_token_permanent(domain, *args):
     if not args:
         return None
@@ -129,4 +134,4 @@ def request(*args):
 
 
 if __name__ == "__main__":
-    pass
+    print(generate_token())

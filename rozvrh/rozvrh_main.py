@@ -19,7 +19,7 @@ def wxdt_to_pydt(date):
     return datetime.datetime.strptime(date, "%d/%m/%Y")
 
 
-def main_close_handler(event):
+def close_handler(event):
     App.frameRozvrh.Hide()
     event.Skip()
 
@@ -53,6 +53,8 @@ def gridRozvrh_useless_handler(event):
 
 
 def updategrid(date=rozvrhlib.defaultdate):
+    wait = wx.BusyCursor()
+
     ret = rozvrhlib.getlessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
@@ -91,8 +93,12 @@ def updategrid(date=rozvrhlib.defaultdate):
     App.frameRozvrh.SetMaxClientSize((-1, x))
     App.frameRozvrh.Layout()
 
+    del wait
+
 
 def init_main(date=rozvrhlib.defaultdate):
+    wait = wx.BusyCursor()
+
     ret = rozvrhlib.getlessons(date)
     weekmonday = ret[0]
     lessoncount = ret[1]
@@ -126,7 +132,7 @@ def init_main(date=rozvrhlib.defaultdate):
         wx.grid.EVT_GRID_CMD_CELL_LEFT_CLICK, lambda event: gridRozvrh_handler(event, lessoncount, table_extended)
     )
     App.frameRozvrh.gridRozvrh.Bind(wx.grid.EVT_GRID_RANGE_SELECT, gridRozvrh_useless_handler)
-    App.frameRozvrh.Bind(wx.EVT_CLOSE, main_close_handler)
+    App.frameRozvrh.Bind(wx.EVT_CLOSE, close_handler)
 
     App.frameRozvrh.statusbar.SetStatusText(nazevcyklu.capitalize())
     App.frameRozvrh.gridRozvrh.AutoSize()
@@ -135,6 +141,8 @@ def init_main(date=rozvrhlib.defaultdate):
     App.frameRozvrh.SetMinClientSize((w, x))
     App.frameRozvrh.SetMaxClientSize((-1, x))
     App.frameRozvrh.Layout()
+
+    del wait
     App.MainLoop()
 
 
