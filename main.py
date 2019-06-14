@@ -136,6 +136,7 @@ def init_login():
     dialog.schoolComboBox.Disable()
     dialog.cityComboBox.SetItems(bakalib.getcities())
     dialog.buttonLogin.Bind(wx.EVT_BUTTON, button_login_handler)
+    dialog.textUrl.SetLabelText("Prosím vyberte školu.")
     dialog.cityComboBox.Bind(
         wx.EVT_COMBOBOX, lambda event: combobox_city_handler(event, dialog.cityComboBox.GetValue())
     )
