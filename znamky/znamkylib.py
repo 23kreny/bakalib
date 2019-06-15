@@ -21,6 +21,8 @@ class Lessons:
     def getlessonnames(self):
         if not self.content:
             self.refreshjson()
+        if self.content["results"]["predmety"] is None:
+            return None
         result = []
         print(self.content)
         for predmet in self.content["results"]["predmety"]["predmet"]:

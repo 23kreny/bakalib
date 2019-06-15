@@ -14,6 +14,8 @@ def init_main():
     lessons = znamkylib.Lessons()
     grades = {}
     lesson_list = lessons.getlessonnames()
+    if lesson_list is None:
+        return App.frameZnamky.tree_ctrl_1.AddRoot("Nemáš ještě žádné známky!")
     App.frameZnamky.SetTitle("Známky")
     root = App.frameZnamky.tree_ctrl_1.AddRoot("Známky")
     for i, zkr in enumerate(lesson_list):
