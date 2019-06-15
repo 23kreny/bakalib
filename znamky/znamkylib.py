@@ -22,6 +22,7 @@ class Lessons:
         if not self.content:
             self.refreshjson()
         result = []
+        print(self.content)
         for predmet in self.content["results"]["predmety"]["predmet"]:
             result.append(predmet["nazev"])
         return result
