@@ -68,6 +68,7 @@ class MainApp(object):
 
         self.app.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
         self.app.frameMain.Update()
+        self.app.frameMain.Refresh()
 
         del wait
         App.app.MainLoop()
