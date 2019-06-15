@@ -67,6 +67,7 @@ class MainApp(object):
         jmeno, skola = bakalib.getbasicinfo()
 
         self.app.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
+        self.app.frameMain.Update()
 
         del wait
         App.app.MainLoop()
