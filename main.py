@@ -106,6 +106,7 @@ class LoginDialog:
         self.dialog.Show()
 
         del wait
+        App.init()
 
     def button_login_handler(self, event):
         wait = wx.BusyCursor()
