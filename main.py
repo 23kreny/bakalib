@@ -182,3 +182,4 @@ if __name__ == "__main__":
     else:
         Dialog.init()
         Dialog.dialog.ShowModal()
+        App.init()

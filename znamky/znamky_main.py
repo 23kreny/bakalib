@@ -23,9 +23,9 @@ def init_main():
         App.frameZnamky.tree_ctrl_1.AppendItem(item1, "Počet známek: %d" % (len(grades[predmet])))
         for grade in grades[predmet]:
             if not isinstance(grade["titulek"], type(None)):
-                item2str = ("%s - %s" % (grade["znamka"], grade["titulek"]))
+                item2str = ("%s: %s" % (grade["znamka"], grade["titulek"]))
             else:
-                item2str = ("%s - %s" % (grade["znamka"], grade["poznamka"]))
+                item2str = ("%s: %s" % (grade["znamka"], grade["poznamka"]))
             item2 = App.frameZnamky.tree_ctrl_1.AppendItem(item1, item2str)
             try:
                 if grade["poznamka"] not in item2str:
