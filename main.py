@@ -64,9 +64,6 @@ class MainApp(object):
         self.app.frameMain.buttonChangeuser.Bind(wx.EVT_BUTTON, self.changeuser_handler)
         self.app.frameMain.Bind(wx.EVT_CLOSE, self.main_close_handler)
 
-        jmeno, skola = bakalib.getbasicinfo()
-
-        self.app.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
         self.app.frameMain.Update()
         self.app.frameMain.Refresh()
 
@@ -141,6 +138,10 @@ class LoginDialog:
                       "Heslo je zde bezpečně zašifrováno.\nSoubor naleznete v %s" \
                       % (token_resp, commonlib.auth_file.rstrip("auth.json"))
         wx.MessageBox(credmessage, credtitle)
+
+        jmeno, skola = bakalib.getbasicinfo()
+        App.app.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
+
         del wait
         self.dialog.buttonLogin.Disable()
         event.Skip()
