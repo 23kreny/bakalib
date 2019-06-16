@@ -24,7 +24,6 @@ class Lessons:
         if self.content["results"]["predmety"] is None:
             return None
         result = []
-        print(self.content)
         for predmet in self.content["results"]["predmety"]["predmet"]:
             result.append(predmet["nazev"])
         return result

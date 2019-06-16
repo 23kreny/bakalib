@@ -23,6 +23,16 @@ def init_main():
     for predmet in grades:
         item1 = App.frameZnamky.tree_ctrl_1.AppendItem(root, predmet)
         App.frameZnamky.tree_ctrl_1.AppendItem(item1, "Počet známek: %d" % (len(grades[predmet])))
+        znamky = []
+        znamky_pocet = 0
+        for grade in grades[predmet]:
+            try:
+                znamky.append(int(grade["znamka"]))
+                znamky_pocet += 1
+            except ValueError:
+                pass
+        nevazeny_prumer = (sum(znamky) / znamky_pocet)
+        App.frameZnamky.tree_ctrl_1.AppendItem(item1, "Nevážený průměr: %f" % nevazeny_prumer)
         for grade in grades[predmet]:
             if not isinstance(grade["titulek"], type(None)):
                 item2str = ("%s: %s" % (grade["znamka"], grade["titulek"]))
