@@ -12,11 +12,12 @@ def init_main():
     wait = wx.BusyCursor()
 
     lessons = znamkylib.Lessons()
-    grades = {}
     lesson_list = lessons.getlessonnames()
     if not lesson_list:
         App.frameZnamky.tree_ctrl_1.AddRoot("Nemáš ještě žádné známky!")
-        return None
+        del wait
+        return App.MainLoop()
+    grades = {}
     App.frameZnamky.SetTitle("Známky")
     root = App.frameZnamky.tree_ctrl_1.AddRoot("Známky")
     for i, zkr in enumerate(lesson_list):
