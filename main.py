@@ -64,6 +64,9 @@ class MainApp(object):
         self.app.frameMain.buttonChangeuser.Bind(wx.EVT_BUTTON, self.changeuser_handler)
         self.app.frameMain.Bind(wx.EVT_CLOSE, self.main_close_handler)
 
+        jmeno, skola = bakalib.getbasicinfo()
+        App.app.frameMain.statusbar.SetStatusText("%s - %s" % (jmeno, skola))
+
         self.app.frameMain.Update()
         self.app.frameMain.Refresh()
 
