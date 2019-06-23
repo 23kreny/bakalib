@@ -88,9 +88,6 @@ def updategrid(date=rozvrhlib.defaultdate):
     App.frameRozvrh.statusbar.SetStatusText(nazevcyklu.capitalize())
     App.frameRozvrh.gridRozvrh.Update()
     App.frameRozvrh.gridRozvrh.AutoSize()
-    (w, x) = App.frameRozvrh.GetClientSize()
-    App.frameRozvrh.SetMinClientSize((w, x))
-    App.frameRozvrh.SetMaxClientSize((-1, x))
     App.frameRozvrh.Layout()
 
     del wait
