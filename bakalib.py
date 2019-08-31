@@ -4,11 +4,9 @@ import hashlib
 import json
 import re
 
-import bs4
 import lxml.etree as ET
 import requests
 import urllib3
-import xmltodict
 
 import util
 
@@ -27,7 +25,6 @@ class Municipality:
                     print("{}: {}".format(name, domain))
     Methods:\n
             `self.__init__()`: Initiates a `self.db` variable containing the database
-            `self.update()`: Downloads updated `schooldb.json` file from bitbucket repository.
             `self.rebuild()`: Rebuilds the database from url 'https://sluzby.bakalari.cz/api/v1/municipality'.
     '''
     def __init__(self):
@@ -35,20 +32,13 @@ class Municipality:
         if util.schooldb_file_path.is_file():
             self.db = json.loads(util.schooldb_file_path.read_text(encoding='utf-8'), encoding='utf-8')
         else:
-            self.db = self.update()
-
-    def update(self) -> dict:
-        '''
-        Updates the `schooldb.json` file from my bitbucket repo.\n
-        Calls `self.rebuild()` when updated `.json` cannot be found and the municipality `.xml` differs.
-        '''
-        return self.rebuild()
+            self.db = self.rebuild()
 
     def rebuild(self) -> dict:
         '''
         Rebuilds the `schooldb.json` file from the internet.\n
         Takes several minutes. Use only when needed.\n
-        Gets called when `self.update()` doesn't have a new version but the municipality `.xml` differs.
+        Returns a `dict` of all cities and schools in it, also with school domains.
         '''
         from time import sleep
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
@@ -76,79 +66,107 @@ class Municipality:
 
 
 class Client(object):
-    def __init__(self, user: str, password: str, domain: str):
+    def __init__(self, username: str, password=None, domain=None):
+        self.username = username
         super().__init__()
-        if util.token_file_path.is_file():
-            self.permtoken = util.token_file_path.read_text(encoding='utf-8')
+        if util.auth_file_path.is_file():
+            auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'), encoding='utf-8')
+            for user in auth_file:
+                if user["Username"] == username:
+                    self.url = user["URL"]
+                    self.token = self.token(user["PermanentToken"])
         else:
-            self.permtoken = self.permanent_token(user, password, domain)
+            self.url = "https://{}/login.aspx".format(domain)
+            self.token = self.token(self.permanent_token(user, password))
 
-    def basic_info(self):
-        content = self.request("login")["results"]
-        return content["jmeno"], content["skola"]
-
-    def request(self, *args):
-        with open(util.auth_file, "r") as f:
-            domain = json.load(f)["Domain"]
-        params = {"hx": self.token()}
-        if args is None or len(args) > 2:
-            print("Bad parameters.")
-            return None
-        params.update({"pm": args[0]})
-        if len(args) > 1:
-            params.update({"pmd": args[1]})
-        url = "https://" + domain + "/login.aspx"
-        r = requests.get(url=url, params=params, verify=False)
-        soup = bs4.BeautifulSoup(r.content, "html.parser")
-        xml = soup.encode("utf-8")
-        xmldict = xmltodict.parse(xml)
-        return json.loads(json.dumps(xmldict, indent=4, sort_keys=True))
-
-    def permanent_token(self, user: str, password: str, domain: str):
+    def permanent_token(self, user: str, password: str) -> str:
+        '''
+        Generates a permanent access token with securely hashed password.\n
+        Returns a `str` containing the token.
+        '''
         params = {"gethx": user}
-        url = "https://" + domain + "/login.aspx"
-        r = requests.get(url=url, params=params, verify=False, stream=True)
+        r = requests.get(url=self.url, params=params, verify=False, stream=True)
         r.raw.decode_content = True
         xml = ET.parse(r.raw)
-        for elem in xml.find("res"):
-            print(elem)
-        salt = jsonxml["results"]["salt"] + jsonxml["results"]["ikod"] + jsonxml["results"]["typ"]
-        hashstring = (salt + self.password).encode("utf-8")
-        hashpass = base64.b64encode(hashlib.sha512(hashstring).digest())
-        permtoken = "*login*" + self.user + "*pwd*" + hashpass.decode("utf8") + "*sgn*ANDR"
-        json_auth = {
-            "Domain": domain,
-            "PermanentToken": permtoken
-        }
-        if not util.conf_dir.is_dir():
-            util.conf_dir.mkdir()
-        with open(util.auth_file, "w") as f:
-            json.dump(json_auth, f, indent=4, sort_keys=True)
-        if not self.istoken_valid():
-            util.auth_file_path.unlink()
-            return "Password is incorrect."
-        return json.dumps(json_auth, indent=4, sort_keys=True)
+        for result in xml.iter("results"):
+            if result.find("res").text == "02":
+                return "wrong username"
+            salt = result.find("salt").text
+            ikod = result.find("ikod").text
+            typ = result.find("typ").text
+        salted_password = (salt + ikod + typ + password).encode("utf-8")
+        hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
+        permtoken = "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
+        if self.is_token_valid(self.token(permtoken)):
+            if util.auth_file_path.is_file():
+                auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'))
+                auth_file.append({"Username": user, "URL": self.url, "PermanentToken": permtoken})
+            else:
+                auth_file = [{"Username": user, "URL": self.url, "PermanentToken": permtoken}]
+            util.auth_file_path.write_text(json.dumps(auth_file, indent=4), encoding='utf-8')
+            return permtoken
+        return "wrong password"
 
-
-    def token(self, permtoken: str):
-        if not util.auth_file_path.is_file():
-            return "Auth file doesn't exist."
-        else:
-            with open(util.auth_file, "r") as f:
-                permtoken = json.load(f)["PermToken"]
-        now = datetime.date.today().strftime("%Y%m%d")
-        h = hashlib.sha512((permtoken + now).encode("utf8")).digest()
-        token = base64.urlsafe_b64encode(h).decode("utf8")
+    def token(self, permtoken: str) -> str:
+        today = datetime.date.today()
+        datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
+        hash = hashlib.sha512((permtoken + datecode).encode("utf-8")).digest()
+        token = base64.urlsafe_b64encode(hash).decode("utf-8")
         return token
 
-
-    def istoken_valid(self):
-        content = self.request("rozvrh")
-        if content["results"]["result"] == "-1":
+    def is_token_valid(self, token: str) -> bool:
+        result = self.request(token, "login")
+        if result.find("result").text == "-1":
             return False
         return True
 
+    def request(self, token: str, *args) -> ET._Element:
+        '''
+        Make a GET request to school URL.\n
+        Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.\n
+        Returns a response `lxml.etree._Element`
+        '''
+        if args is None or len(args) > 2:
+            return "bad params"
+        params = {"hx": token, "pm": args[0]}
+        if len(args) > 1:
+            params.update({"pmd": args[1]})
+        r = requests.get(url=self.url, params=params, verify=False, stream=True)
+        r.raw.decode_content = True
+        xml = ET.parse(r.raw)
+        return [result for result in xml.iter("results")][0]
 
-if __name__ == '__main__':
-    user = Client("xKrone97645", "placeholder", "prumyslovka.bakalari.cz:446/bakaweb")
-    user.permanent_token()
+
+class Rozvrh(Client):
+    def __init__(self, Client):
+        self.client = Client
+        self.url = self.client.url
+        print(self.client.username)
+        super().__init__(Client)
+        self.date = datetime.date.today()
+# #region `Convenience methods`
+    def prev_week(self):
+        self.date = self.date - datetime.timedelta(7)
+        return self.date_week(self.date)
+
+    def this_week(self):
+        return self.date_week()
+
+    def next_week(self):
+        self.date = self.date + datetime.timedelta(7)
+        return self.date_week(self.date)
+# #endregion
+
+    def date_week(self, date=datetime.date.today()):
+        response = self.request(
+            self.token, "rozvrh", "{:04}{:02}{:02}"
+            .format(date.year, date.month, date.day)
+        )
+        for element in response:
+            print(element)
+
+
+if __name__ == "__main__":
+    
+    rozvrh = Rozvrh(User)
+    print(rozvrh.this_week())
