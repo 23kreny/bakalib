@@ -7,6 +7,7 @@ import re
 import lxml.etree as ET
 import requests
 import urllib3
+import xmltodict
 
 import util
 
@@ -65,19 +66,38 @@ class Municipality:
         return schooldb
 
 
+def request(url: str, token: str, *args) -> dict:
+    '''
+    Make a GET request to school URL.\n
+    Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.\n
+    Returns a response `lxml.etree._Element`
+    '''
+    if args is None or len(args) > 2:
+        return "bad params"
+    params = {"hx": token, "pm": args[0]}
+    if len(args) > 1:
+        params.update({"pmd": args[1]})
+    r = requests.get(url=url, params=params, verify=False, stream=True)
+    r.raw.decode_content = True
+    return xmltodict.parse(r.raw)
+
+
 class Client(object):
     def __init__(self, username: str, password=None, domain=None):
-        self.username = username
         super().__init__()
         if util.auth_file_path.is_file():
-            auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'), encoding='utf-8')
-            for user in auth_file:
-                if user["Username"] == username:
-                    self.url = user["URL"]
-                    self.token = self.token(user["PermanentToken"])
+            if not password and not domain:
+                auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'), encoding='utf-8')
+                for user in auth_file:
+                    if user["Username"] == username:
+                        self.url = user["URL"]
+                        self.token = self.token(user["PermanentToken"])
+            else:
+                self.url = "https://{}/login.aspx".format(domain)
+                self.token = self.token(self.permanent_token(username, password))
         else:
-            self.url = "https://{}/login.aspx".format(domain)
-            self.token = self.token(self.permanent_token(user, password))
+            raise FileNotFoundError('Auth file was not found and password and/or domain argument was not passed')
+        self.timetable = Timetable(self.url, self.token)
 
     def permanent_token(self, user: str, password: str) -> str:
         '''
@@ -115,36 +135,22 @@ class Client(object):
         return token
 
     def is_token_valid(self, token: str) -> bool:
-        result = self.request(token, "login")
-        if result.find("result").text == "-1":
+        result = request(self.url, token, "login")
+        if result["results"]["result"] == "-1":
             return False
         return True
 
-    def request(self, token: str, *args) -> ET._Element:
-        '''
-        Make a GET request to school URL.\n
-        Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.\n
-        Returns a response `lxml.etree._Element`
-        '''
-        if args is None or len(args) > 2:
-            return "bad params"
-        params = {"hx": token, "pm": args[0]}
-        if len(args) > 1:
-            params.update({"pmd": args[1]})
-        r = requests.get(url=self.url, params=params, verify=False, stream=True)
-        r.raw.decode_content = True
-        xml = ET.parse(r.raw)
-        return [result for result in xml.iter("results")][0]
 
+class Timetable(object):
+    date = datetime.date.today()
 
-class Rozvrh(Client):
-    def __init__(self, Client):
-        self.client = Client
-        self.url = self.client.url
-        print(self.client.username)
-        super().__init__(Client)
-        self.date = datetime.date.today()
-# #region `Convenience methods`
+    def __init__(self, url, token):
+        super().__init__()
+        self.url = url
+        self.token = token
+
+  # #region `Convenience methods - self.prev_week(), self.this_week(), self.next_week()`
+
     def prev_week(self):
         self.date = self.date - datetime.timedelta(7)
         return self.date_week(self.date)
@@ -155,18 +161,51 @@ class Rozvrh(Client):
     def next_week(self):
         self.date = self.date + datetime.timedelta(7)
         return self.date_week(self.date)
-# #endregion
+  # #endregion
 
     def date_week(self, date=datetime.date.today()):
-        response = self.request(
-            self.token, "rozvrh", "{:04}{:02}{:02}"
-            .format(date.year, date.month, date.day)
+        response = request(
+            self.url,
+            self.token,
+            "rozvrh",
+            "{:04}{:02}{:02}".format(date.year, date.month, date.day)
         )
-        for element in response:
-            print(element)
+        days_translated = {
+            "Po": "Monday",
+            "Út": "Tuesday",
+            "St": "Wednesday",
+            "Čt": "Thursday",
+            "Pá": "Friday"
+        }
+        captions = []
+        begintimes = []
+        endtimes = []
+        days = {}
+        for lesson in response["results"]["rozvrh"]["hodiny"]["hod"]:
+            captions.append(lesson["caption"])
+            begintimes.append(lesson["begintime"])
+            endtimes.append(lesson["endtime"])
+        for day in response["results"]["rozvrh"]["dny"]["den"]:
+            day_translated = days_translated[day["zkratka"]]
+            days[day_translated] = []
+            for lesson in day["hodiny"]["hod"]:
+                days[day_translated].append({
+                    "IdCode": lesson.get("idcode"),
+                    "Type": lesson.get("typ"),
+                    "LessonAbbreviation": lesson.get("zkrpr"),
+                    "LessonName": lesson.get("pr"),
+                    "TeacherAbbreviation": lesson.get("zkruc"),
+                    "TeacherName": lesson.get("uc"),
+                    "RoomAbbreviation": lesson.get("zkrmist"),
+                    "RoomName": lesson.get("mist"),
+                    "AbsenceAbbreviation": lesson.get("zkrabs"),
+                    "Absence": lesson.get("abs"),
+
+                })
+        for day in days:
+            print(type(day))
 
 
 if __name__ == "__main__":
-    
-    rozvrh = Rozvrh(User)
-    print(rozvrh.this_week())
+    User = Client()
+    print(User.timetable.this_week())
