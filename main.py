@@ -3,9 +3,10 @@ import sys
 import wx
 
 import bakalib
-import commonlib
+import util
 import icons
 import main_ui
+
 from rozvrh import rozvrh_main, rozvrh_ui
 from znamky import znamky_main, znamky_ui
 
@@ -139,7 +140,7 @@ class LoginDialog:
         credtitle = "Zpracování údajů"
         credmessage = "Vaše údaje jsou ukládány ve formátu: \n\n%s\n\n" \
                       "Heslo je zde bezpečně zašifrováno.\nSoubor naleznete v %s" \
-                      % (token_resp, commonlib.auth_file.rstrip("auth.json"))
+                      % (token_resp, util.auth_file.rstrip("auth.json"))
         wx.MessageBox(credmessage, credtitle)
 
         jmeno, skola = bakalib.getbasicinfo()
@@ -184,7 +185,7 @@ class LoginDialog:
 if __name__ == "__main__":
     Dialog = LoginDialog()
     App = MainApp(Dialog)
-    if commonlib.auth_file_path.is_file() and bakalib.istoken_valid():
+    if util.auth_file_path.is_file() and bakalib.istoken_valid():
         App.init()
     else:
         Dialog.init()
