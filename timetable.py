@@ -1,22 +1,7 @@
-import datetime
-
 import wx
 import wx.grid
 
-from rozvrh import rozvrh_ui
-from rozvrh import rozvrhlib
-
-
-def pydt_to_wxdt(date):
-    day = date.day
-    month = date.month
-    year = date.year
-    return wx.DateTime.FromDMY(day=day, month=month - 1, year=year)
-
-
-def wxdt_to_pydt(date):
-    date = date.Format("%d/%m/%Y")
-    return datetime.datetime.strptime(date, "%d/%m/%Y")
+from ui_rozvrh import appRozvrh
 
 
 def close_handler(event):

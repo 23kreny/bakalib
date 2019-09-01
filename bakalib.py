@@ -2,8 +2,9 @@ import base64
 import datetime
 import hashlib
 import json
-import re
 import pathlib
+import re
+
 import lxml.etree as ET
 import requests
 import urllib3
@@ -171,14 +172,14 @@ class Timetable(object):
 
   # #region `Convenience methods - self.prev_week(), self.this_week(), self.next_week()`
 
-    def prev_week(self):
+    def prev_week(self) -> dict:
         self.date = self.date - datetime.timedelta(7)
         return self.date_week(self.date)
 
-    def this_week(self):
+    def this_week(self) -> dict:
         return self.date_week()
 
-    def next_week(self):
+    def next_week(self) -> dict:
         self.date = self.date + datetime.timedelta(7)
         return self.date_week(self.date)
   # #endregion
@@ -202,9 +203,9 @@ class Timetable(object):
             })
 
         for day in response["results"]["rozvrh"]["dny"]["den"]:
-            lessons = []
+            temp_list = []
             for lesson in day["hodiny"]["hod"]:
-                lessons.append({
+                temp_list.append({
                     "IdCode": lesson.get("idcode"),
                     "Type": lesson.get("typ"),
                     "LessonAbbreviation": lesson.get("zkrpr"),
@@ -224,11 +225,9 @@ class Timetable(object):
                     "Caption": lesson.get("caption"),
                     "Notice": lesson.get("notice"),
                 })
-            result["Days"].append(lessons)
+            result["Days"].append(temp_list)
         return result
 
 
-if __name__ == "__main__":
-    import util
-    User = Client(username="xKrone97645", auth_file=util.auth_file)
-    print(json.dumps(User.timetable.next_week(), indent=4))
+class Grades(object):
+    pass
