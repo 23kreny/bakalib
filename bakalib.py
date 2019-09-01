@@ -3,15 +3,16 @@ import datetime
 import hashlib
 import json
 import re
-
+import pathlib
 import lxml.etree as ET
 import requests
 import urllib3
 import xmltodict
 
-import util
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+conf_dir = pathlib.Path.home().joinpath(".bakalib")
+schooldb_file = conf_dir.joinpath("schooldb.json")
 
 
 class Municipality:
@@ -30,8 +31,10 @@ class Municipality:
     '''
     def __init__(self):
         super().__init__()
-        if util.schooldb_file_path.is_file():
-            self.db = json.loads(util.schooldb_file_path.read_text(encoding='utf-8'), encoding='utf-8')
+        if not conf_dir.is_dir():
+            conf_dir.mkdir()
+        if schooldb_file.is_file():
+            self.db = json.loads(schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
         else:
             self.db = self.rebuild()
 
@@ -79,27 +82,52 @@ def request(url: str, token: str, *args) -> dict:
         params.update({"pmd": args[1]})
     r = requests.get(url=url, params=params, verify=False, stream=True)
     r.raw.decode_content = True
-    return xmltodict.parse(r.raw)
+    response = xmltodict.parse(r.raw)
+    if not response["results"]["result"] == "01":
+        raise LookupError("Received response is invalid.")
+        return None
+    return response
 
 
 class Client(object):
-    def __init__(self, username: str, password=None, domain=None):
+    def __init__(self, username: str, password=None, domain=None, auth_file=None):
         super().__init__()
-        if util.auth_file_path.is_file():
+        if auth_file:
             if not password and not domain:
-                auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'), encoding='utf-8')
-                for user in auth_file:
-                    if user["Username"] == username:
-                        self.url = user["URL"]
-                        self.token = self.token(user["PermanentToken"])
+                if auth_file.is_file():
+                    auth_dict = json.loads(auth_file.read_text(encoding='utf-8'), encoding='utf-8')
+                    isFound = False
+                    for user in auth_dict:
+                        if user["Username"] == username:
+                            self.url = user["URL"]
+                            self.token = self.__token(user["PermanentToken"])
+                            isFound = True
+                    if not isFound:
+                        raise ValueError("Auth file was specified without password and domain, but it didn't contain the user")
+                else:
+                    raise FileNotFoundError("Auth file was specified but not found")
             else:
                 self.url = "https://{}/login.aspx".format(domain)
-                self.token = self.token(self.permanent_token(username, password))
+                permtoken = self.__permanent_token(username, password)
+                if self.__is_token_valid(self.__token(permtoken)):
+                    auth_dict = [{"Username": username, "URL": self.url, "PermanentToken": permtoken}]
+                    auth_file.write_text(json.dumps(auth_dict, indent=4), encoding='utf-8')
+                    self.token = self.__token(permtoken)
+                else:
+                    raise ValueError("Token is invalid. That often means the password is wrong")
+        elif password and domain:
+            self.url = "https://{}/login.aspx".format(domain)
+            permtoken = self.__permanent_token(username, password)
+            if self.__is_token_valid(self.__token(permtoken)):
+                self.token = self.__token(permtoken)
+            else:
+                raise ValueError("Token is invalid. That often means the password is wrong")
         else:
-            raise FileNotFoundError('Auth file was not found and password and/or domain argument was not passed')
+            raise ValueError("Incorrect arguments")
+            raise SystemExit("Exiting due to errors")
         self.timetable = Timetable(self.url, self.token)
 
-    def permanent_token(self, user: str, password: str) -> str:
+    def __permanent_token(self, user: str, password: str) -> str:
         '''
         Generates a permanent access token with securely hashed password.\n
         Returns a `str` containing the token.
@@ -117,24 +145,16 @@ class Client(object):
         salted_password = (salt + ikod + typ + password).encode("utf-8")
         hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
         permtoken = "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
-        if self.is_token_valid(self.token(permtoken)):
-            if util.auth_file_path.is_file():
-                auth_file = json.loads(util.auth_file_path.read_text(encoding='utf-8'))
-                auth_file.append({"Username": user, "URL": self.url, "PermanentToken": permtoken})
-            else:
-                auth_file = [{"Username": user, "URL": self.url, "PermanentToken": permtoken}]
-            util.auth_file_path.write_text(json.dumps(auth_file, indent=4), encoding='utf-8')
-            return permtoken
-        return "wrong password"
+        return permtoken
 
-    def token(self, permtoken: str) -> str:
+    def __token(self, permtoken: str) -> str:
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
         hash = hashlib.sha512((permtoken + datecode).encode("utf-8")).digest()
         token = base64.urlsafe_b64encode(hash).decode("utf-8")
         return token
 
-    def is_token_valid(self, token: str) -> bool:
+    def __is_token_valid(self, token: str) -> bool:
         result = request(self.url, token, "login")
         if result["results"]["result"] == "-1":
             return False
@@ -163,33 +183,28 @@ class Timetable(object):
         return self.date_week(self.date)
   # #endregion
 
-    def date_week(self, date=datetime.date.today()):
+    def date_week(self, date=datetime.date.today()) -> dict:
         response = request(
             self.url,
             self.token,
             "rozvrh",
             "{:04}{:02}{:02}".format(date.year, date.month, date.day)
         )
-        days_translated = {
-            "Po": "Monday",
-            "Út": "Tuesday",
-            "St": "Wednesday",
-            "Čt": "Thursday",
-            "Pá": "Friday"
-        }
-        captions = []
-        begintimes = []
-        endtimes = []
-        days = {}
+        result = {}
+        result["Header"] = []
+        result["Days"] = []
+
         for lesson in response["results"]["rozvrh"]["hodiny"]["hod"]:
-            captions.append(lesson["caption"])
-            begintimes.append(lesson["begintime"])
-            endtimes.append(lesson["endtime"])
+            result["Header"].append({
+                    "Caption": lesson["caption"],
+                    "BeginTime": lesson["begintime"],
+                    "EndTime": lesson["endtime"],
+            })
+
         for day in response["results"]["rozvrh"]["dny"]["den"]:
-            day_translated = days_translated[day["zkratka"]]
-            days[day_translated] = []
+            lessons = []
             for lesson in day["hodiny"]["hod"]:
-                days[day_translated].append({
+                lessons.append({
                     "IdCode": lesson.get("idcode"),
                     "Type": lesson.get("typ"),
                     "LessonAbbreviation": lesson.get("zkrpr"),
@@ -200,12 +215,20 @@ class Timetable(object):
                     "RoomName": lesson.get("mist"),
                     "AbsenceAbbreviation": lesson.get("zkrabs"),
                     "Absence": lesson.get("abs"),
-
+                    "Theme": lesson.get("tema"),
+                    "GroupAbbreviation": lesson.get("zkrskup"),
+                    "GroupName": lesson.get("skup"),
+                    "Cycle": lesson.get("cycle"),
+                    "Disengaged": lesson.get("uvol"),
+                    "ChangeDescription": lesson.get("chng"),
+                    "Caption": lesson.get("caption"),
+                    "Notice": lesson.get("notice"),
                 })
-        for day in days:
-            print(type(day))
+            result["Days"].append(lessons)
+        return result
 
 
 if __name__ == "__main__":
-    User = Client()
-    print(User.timetable.this_week())
+    import util
+    User = Client(username="xKrone97645", auth_file=util.auth_file)
+    print(json.dumps(User.timetable.next_week(), indent=4))
