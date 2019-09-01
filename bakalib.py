@@ -1,4 +1,5 @@
 import base64
+import collections
 import datetime
 import hashlib
 import json
@@ -84,10 +85,14 @@ def request(url: str, token: str, *args) -> dict:
     r = requests.get(url=url, params=params, verify=False, stream=True)
     r.raw.decode_content = True
     response = xmltodict.parse(r.raw)
-    if not response["results"]["result"] == "01":
-        raise LookupError("Received response is invalid.")
+    try:
+        if not response["results"]["result"] == "01":
+            raise LookupError("Received response is invalid.")
+            return None
+    except KeyError:
+        raise LookupError("Wrong request")
         return None
-    return response
+    return response["results"]
 
 
 class Client(object):
@@ -126,7 +131,22 @@ class Client(object):
         else:
             raise ValueError("Incorrect arguments")
             raise SystemExit("Exiting due to errors")
+
+        self.basic_info = self.__basic_info()
+
         self.timetable = Timetable(self.url, self.token)
+
+    def __basic_info(self) -> collections.namedtuple:
+        result = request(self.url, self.token, "login")
+        Result = collections.namedtuple("Result", "version name type type_name school_name school_type class_ year modules newmarkdays")
+        temp_list = []
+        for element in result:
+            if not element == "result":
+                if element == "params":
+                    temp_list.append(result.get(element).get("newmarkdays"))
+                else:
+                    temp_list.append(result.get(element))
+        return Result(*temp_list)
 
     def __permanent_token(self, user: str, password: str) -> str:
         '''
@@ -157,52 +177,51 @@ class Client(object):
 
     def __is_token_valid(self, token: str) -> bool:
         result = request(self.url, token, "login")
-        if result["results"]["result"] == "-1":
+        if not result:
             return False
         return True
 
 
 class Timetable(object):
-    date = datetime.date.today()
-
     def __init__(self, url, token):
         super().__init__()
         self.url = url
         self.token = token
+        self.date = datetime.date.today()
 
   # #region `Convenience methods - self.prev_week(), self.this_week(), self.next_week()`
 
-    def prev_week(self) -> dict:
+    def prev_week(self):
         self.date = self.date - datetime.timedelta(7)
         return self.date_week(self.date)
 
-    def this_week(self) -> dict:
+    def this_week(self):
         return self.date_week()
 
-    def next_week(self) -> dict:
+    def next_week(self):
         self.date = self.date + datetime.timedelta(7)
         return self.date_week(self.date)
   # #endregion
 
-    def date_week(self, date=datetime.date.today()) -> dict:
+    def date_week(self, date=datetime.date.today()):
         response = request(
             self.url,
             self.token,
             "rozvrh",
             "{:04}{:02}{:02}".format(date.year, date.month, date.day)
         )
-        result = {}
-        result["Header"] = []
-        result["Days"] = []
+        Result = collections.namedtuple("Result", "header days")
 
-        for lesson in response["results"]["rozvrh"]["hodiny"]["hod"]:
-            result["Header"].append({
-                    "Caption": lesson["caption"],
-                    "BeginTime": lesson["begintime"],
-                    "EndTime": lesson["endtime"],
+        header = []
+        for lesson in response["rozvrh"]["hodiny"]["hod"]:
+            header.append({
+                "Caption": lesson["caption"],
+                "BeginTime": lesson["begintime"],
+                "EndTime": lesson["endtime"],
             })
 
-        for day in response["results"]["rozvrh"]["dny"]["den"]:
+        days = []
+        for day in response["rozvrh"]["dny"]["den"]:
             temp_list = []
             for lesson in day["hodiny"]["hod"]:
                 temp_list.append({
@@ -225,9 +244,14 @@ class Timetable(object):
                     "Caption": lesson.get("caption"),
                     "Notice": lesson.get("notice"),
                 })
-            result["Days"].append(temp_list)
-        return result
+            days.append(temp_list)
+        return Result(header, days)
 
 
 class Grades(object):
     pass
+
+
+if __name__ == "__main__":
+    import paths
+    user = Client(username="xKrone97645", auth_file=paths.auth_file)

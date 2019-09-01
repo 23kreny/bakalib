@@ -1,25 +1,21 @@
-import sys
-
 import wx
 
 import bakalib
-import util
-import icons
-import main_ui
-
-from rozvrh import rozvrh_main, rozvrh_ui
-from znamky import znamky_main, znamky_ui
-
-
-# from absence import absence_main, absence_ui
+import grades
+import paths
+import timetable
+import ui_grades
+import ui_main
+import ui_timetable
+import wx_baka_icons
 
 
 class MainApp(object):
-    app = main_ui.appMain()
-    icon_main = wx.Icon(icons.bakalaris.GetIcon())
-    icon_rozvrh = wx.Icon(icons.rozvrh.GetIcon())
-    icon_znamky = wx.Icon(icons.znamky.GetIcon())
-    icon_absence = wx.Icon(icons.absence.GetIcon())
+    app = ui_main.appMain()
+    icon_main = wx.Icon(wx_baka_icons.bakalaris.GetIcon())
+    icon_rozvrh = wx.Icon(wx_baka_icons.rozvrh.GetIcon())
+    icon_znamky = wx.Icon(wx_baka_icons.znamky.GetIcon())
+    icon_absence = wx.Icon(wx_baka_icons.absence.GetIcon())
 
     def __init__(self, wxdialog):
         super(MainApp, self).__init__()
@@ -27,7 +23,7 @@ class MainApp(object):
 
     def main_close_handler(self, event):
         event.Skip()
-        sys.exit()
+        raise SystemExit("Closing")
 
     def rozvrh_handler(self, event):
         rozvrh_main.App = rozvrh_ui.appRozvrh()
@@ -77,7 +73,7 @@ class MainApp(object):
 
 class LoginDialog:
     default_color = None
-    dialog = main_ui.dialogLogin(None, wx.ID_ANY, "")
+    dialog = ui_main.dialogLogin(None, wx.ID_ANY, "")
 
     def __init__(self):
         super(LoginDialog, self).__init__()
