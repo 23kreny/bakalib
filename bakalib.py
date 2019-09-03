@@ -1,10 +1,10 @@
 import base64
-import collections
 import datetime
 import hashlib
 import json
 import pathlib
 import re
+from typing import NamedTuple
 
 import lxml.etree as ET
 import requests
@@ -13,39 +13,39 @@ import xmltodict
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-conf_dir = pathlib.Path.home().joinpath(".bakalib")
-schooldb_file = conf_dir.joinpath("schooldb.json")
-
 
 class Municipality:
     '''
-    Provides info about all schools in all cities in Czech Republic.\n
+    Provides info about all schools that use the Bakaláři system.\n
     Navigate through it like a dictionary:\n
-            municipality = Municipality()
-            hodonin = municipality.db["Hodonín"]
-            for school in hodonin:
-                for name in school:
-                    domain = school[name]
-                    print("{}: {}".format(name, domain))
+        >>> m = Municipality()
+        >>> hodonin = m.cities["Hodonín"]
+        >>> for school in hodonin:
+        >>>     for name in school:
+        >>>        domain = school[name]
+        >>>         print("{}: {}".format(name, domain))
+        Základní škola Hodonín, U Červených domků 40: bakalari.zsdomkyhod.cz:8088/bakaweb
+        Základní škola Hodonín, Vančurova 2, příspěvková organizace: zsvancur.bakalari.cz
+        Základní škola Hodonín, Mírové náměstí 19: zshodonin.bakalari.cz/bakaweb
+        Střední škola průmyslová a umělecká, Hodonín, Brandlova 32: prumyslovka.bakalari.cz:446/bakaweb
     Methods:\n
-            `self.__init__()`: Initiates a `self.db` variable containing the database
-            `self.rebuild()`: Rebuilds the database from url 'https://sluzby.bakalari.cz/api/v1/municipality'.
+            build(): Builds the local database from the 'https://sluzby.bakalari.cz/api/v1/municipality'.
+                     Library comes prepackaged with the database json.
+                     Use only when needed.
     '''
+    conf_dir = pathlib.Path.home().joinpath(".bakalib")
+    schooldb_file = conf_dir.joinpath("schooldb.json")
+
     def __init__(self):
         super().__init__()
-        if not conf_dir.is_dir():
-            conf_dir.mkdir()
-        if schooldb_file.is_file():
-            self.db = json.loads(schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
+        if not self.conf_dir.is_dir():
+            self.conf_dir.mkdir()
+        if self.schooldb_file.is_file():
+            self.cities = json.loads(self.schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
         else:
-            self.db = self.rebuild()
+            self.cities = self.rebuild()
 
-    def rebuild(self) -> dict:
-        '''
-        Rebuilds the `schooldb.json` file from the internet.\n
-        Takes several minutes. Use only when needed.\n
-        Returns a `dict` of all cities and schools in it, also with school domains.
-        '''
+    def build(self) -> dict:
         from time import sleep
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
@@ -67,7 +67,7 @@ class Municipality:
                         domain = re.sub("((/)?login.aspx(/)?)?", "", domain).rstrip("/")
                         schooldb[city_name].append({school_name: domain})
                 sleep(0.05)
-        util.schooldb_file_path.write_text(json.dumps(schooldb, indent=4, sort_keys=True), encoding='utf-8')
+        schooldb_file.write_text(json.dumps(schooldb, indent=4, sort_keys=True), encoding='utf-8')
         return schooldb
 
 
@@ -78,7 +78,8 @@ def request(url: str, token: str, *args) -> dict:
     Returns a response `lxml.etree._Element`
     '''
     if args is None or len(args) > 2:
-        return "bad params"
+        raise ValueError("Bad arguments")
+        return None
     params = {"hx": token, "pm": args[0]}
     if len(args) > 1:
         params.update({"pmd": args[1]})
@@ -134,18 +135,28 @@ class Client(object):
 
         self.basic_info = self.__basic_info()
 
-        self.timetable = Timetable(self.url, self.token)
-
-    def __basic_info(self) -> collections.namedtuple:
-        result = request(self.url, self.token, "login")
-        Result = collections.namedtuple("Result", "version name type type_name school_name school_type class_ year modules newmarkdays")
+    def __basic_info(self):
+        class Result(NamedTuple):
+            version: str
+            name: str
+            type: str
+            type_name: str
+            school_name: str
+            school_type: str
+            class_: str
+            year: str
+            modules: str
+            newmarkdays: str
         temp_list = []
-        for element in result:
+
+        response = request(self.url, self.token, "login")
+
+        for element in response:
             if not element == "result":
                 if element == "params":
-                    temp_list.append(result.get(element).get("newmarkdays"))
+                    temp_list.append(response.get(element).get("newmarkdays"))
                 else:
-                    temp_list.append(result.get(element))
+                    temp_list.append(response.get(element))
         return Result(*temp_list)
 
     def __permanent_token(self, user: str, password: str) -> str:
@@ -181,6 +192,18 @@ class Client(object):
             return False
         return True
 
+    def add_modules(self, *modules):
+        if modules:
+            for module in modules:
+                if module == "timetable":
+                    self.timetable = Timetable(self.url, self.token)
+                elif module == "grades":
+                    self.grades = Grades(self.url, self.token)
+                else:
+                    raise ValueError("Bad module name was provided")
+        else:
+            raise ValueError("No modules were provided")
+
 
 class Timetable(object):
     def __init__(self, url, token):
@@ -204,52 +227,133 @@ class Timetable(object):
   # #endregion
 
     def date_week(self, date=datetime.date.today()):
+        class Result(NamedTuple):
+            headers: list
+            days: list
+
+        class Header(NamedTuple):
+            caption: str
+            begintime: str
+            endtime: str
+
+        class Lesson(NamedTuple):
+            idcode: str
+            type_: str
+            abbr: str
+            name: str
+            teacher_abbr: str
+            teacher: str
+            room_abbr: str
+            room: str
+            absence_abbr: str
+            absence: str
+            theme: str
+            group_abbr: str
+            group: str
+            cycle: str
+            disengaged: str
+            change_description: str
+            caption: str
+            notice: str
+
+        headers = []
+        days = []
+
         response = request(
             self.url,
             self.token,
             "rozvrh",
             "{:04}{:02}{:02}".format(date.year, date.month, date.day)
         )
-        Result = collections.namedtuple("Result", "header days")
 
-        header = []
         for lesson in response["rozvrh"]["hodiny"]["hod"]:
-            header.append({
-                "Caption": lesson["caption"],
-                "BeginTime": lesson["begintime"],
-                "EndTime": lesson["endtime"],
-            })
-
-        days = []
+            headers.append(Header(
+                lesson["caption"],
+                lesson["begintime"],
+                lesson["endtime"],
+            ))
         for day in response["rozvrh"]["dny"]["den"]:
             temp_list = []
             for lesson in day["hodiny"]["hod"]:
-                temp_list.append({
-                    "IdCode": lesson.get("idcode"),
-                    "Type": lesson.get("typ"),
-                    "LessonAbbreviation": lesson.get("zkrpr"),
-                    "LessonName": lesson.get("pr"),
-                    "TeacherAbbreviation": lesson.get("zkruc"),
-                    "TeacherName": lesson.get("uc"),
-                    "RoomAbbreviation": lesson.get("zkrmist"),
-                    "RoomName": lesson.get("mist"),
-                    "AbsenceAbbreviation": lesson.get("zkrabs"),
-                    "Absence": lesson.get("abs"),
-                    "Theme": lesson.get("tema"),
-                    "GroupAbbreviation": lesson.get("zkrskup"),
-                    "GroupName": lesson.get("skup"),
-                    "Cycle": lesson.get("cycle"),
-                    "Disengaged": lesson.get("uvol"),
-                    "ChangeDescription": lesson.get("chng"),
-                    "Caption": lesson.get("caption"),
-                    "Notice": lesson.get("notice"),
-                })
+                temp_list.append(Lesson(
+                    lesson.get("idcode"),
+                    lesson.get("typ"),
+                    lesson.get("zkrpr"),
+                    lesson.get("pr"),
+                    lesson.get("zkruc"),
+                    lesson.get("uc"),
+                    lesson.get("zkrmist"),
+                    lesson.get("mist"),
+                    lesson.get("zkrabs"),
+                    lesson.get("abs"),
+                    lesson.get("tema"),
+                    lesson.get("zkrskup"),
+                    lesson.get("skup"),
+                    lesson.get("cycle"),
+                    lesson.get("uvol"),
+                    lesson.get("chng"),
+                    lesson.get("caption"),
+                    lesson.get("notice"),
+                ))
             days.append(temp_list)
-        return Result(header, days)
+        return Result(headers, days)
 
 
 class Grades(object):
-    pass
+    def __init__(self, url, token):
+        super().__init__()
+        self.url = url
+        self.token = token
+        self.grades = self.__grades()
+
+    def __grades(self):
+        class Result(NamedTuple):
+            subjects: list
+
+        class Subject(NamedTuple):
+            name: str
+            abbr: str
+            average_round: str
+            average: str
+            grades: list
+
+        class Grade(NamedTuple):
+            subject: str
+            maxb: str
+            grade: str
+            gr: str
+            date: str
+            date_granted: str
+            weight: str
+            caption: str
+            type_: str
+            description: str
+
+        subjects = []
+
+        response = request(
+            self.url,
+            self.token,
+            "znamky"
+        )
+
+        for subject in response["predmety"]["predmet"]:
+            temp_list = []
+            for grade in subject["znamky"]["znamka"]:
+                temp_list.append(Grade(
+                    grade.get("pred"),
+                    grade.get("maxb"),
+                    grade.get("znamka"),
+                    grade.get("zn"),
+                    grade.get("datum"),
+                    grade.get("udeleno"),
+                    grade.get("vaha"),
+                    grade.get("caption"),
+                    grade.get("typ"),
+                    grade.get("ozn")
+                ))
+            subjects.append(temp_list)
+        return Result(subjects)
 
 
 if __name__ == "__main__":
