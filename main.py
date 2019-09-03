@@ -26,7 +26,7 @@ class MainApp(object):
         raise SystemExit("Closing")
 
     def rozvrh_handler(self, event):
-        rozvrh_main.App = rozvrh_ui.appRozvrh()
+        timetable.App = ui_timetable.appRozvrh()
         rozvrh_main.App.frameRozvrh.SetIcon(self.icon_rozvrh)
         rozvrh_main.init_main()
         event.Skip()

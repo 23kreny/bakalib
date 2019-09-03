@@ -14,6 +14,10 @@ import xmltodict
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+class BakalibError(Exception):
+    pass
+
+
 class Municipality:
     '''
     Provides info about all schools that use the Bakaláři system.\n
@@ -110,9 +114,9 @@ class Client(object):
                             self.token = self.__token(user["PermanentToken"])
                             isFound = True
                     if not isFound:
-                        raise ValueError("Auth file was specified without password and domain, but it didn't contain the user")
+                        raise BakalibError("Auth file was specified without password and domain, but it didn't contain the user")
                 else:
-                    raise FileNotFoundError("Auth file was specified but not found")
+                    raise BakalibError("Auth file was specified but not found")
             else:
                 self.url = "https://{}/login.aspx".format(domain)
                 permtoken = self.__permanent_token(username, password)
@@ -121,16 +125,16 @@ class Client(object):
                     auth_file.write_text(json.dumps(auth_dict, indent=4), encoding='utf-8')
                     self.token = self.__token(permtoken)
                 else:
-                    raise ValueError("Token is invalid. That often means the password is wrong")
+                    raise BakalibError("Token is invalid. That often means the password is wrong")
         elif password and domain:
             self.url = "https://{}/login.aspx".format(domain)
             permtoken = self.__permanent_token(username, password)
             if self.__is_token_valid(self.__token(permtoken)):
                 self.token = self.__token(permtoken)
             else:
-                raise ValueError("Token is invalid. That often means the password is wrong")
+                raise BakalibError("Token is invalid. That often means the password is wrong")
         else:
-            raise ValueError("Incorrect arguments")
+            raise BakalibError("Incorrect arguments")
             raise SystemExit("Exiting due to errors")
 
         self.basic_info = self.__basic_info()
@@ -187,8 +191,7 @@ class Client(object):
         return token
 
     def __is_token_valid(self, token: str) -> bool:
-        result = request(self.url, token, "login")
-        if not result:
+        if not request(self.url, token, "login"):
             return False
         return True
 
@@ -200,9 +203,9 @@ class Client(object):
                 elif module == "grades":
                     self.grades = Grades(self.url, self.token)
                 else:
-                    raise ValueError("Bad module name was provided")
+                    raise BakalibError("Bad module name was provided")
         else:
-            raise ValueError("No modules were provided")
+            raise BakalibError("No modules were provided")
 
 
 class Timetable(object):
@@ -227,6 +230,12 @@ class Timetable(object):
   # #endregion
 
     def date_week(self, date=datetime.date.today()):
+        response = request(
+            self.url,
+            self.token,
+            "rozvrh",
+            "{:04}{:02}{:02}".format(date.year, date.month, date.day)
+        )
         class Result(NamedTuple):
             headers: list
             days: list
@@ -259,12 +268,6 @@ class Timetable(object):
         headers = []
         days = []
 
-        response = request(
-            self.url,
-            self.token,
-            "rozvrh",
-            "{:04}{:02}{:02}".format(date.year, date.month, date.day)
-        )
 
         for lesson in response["rozvrh"]["hodiny"]["hod"]:
             headers.append(Header(
@@ -304,9 +307,19 @@ class Grades(object):
         super().__init__()
         self.url = url
         self.token = token
-        self.grades = self.__grades()
 
-    def __grades(self):
+    def grades(self):
+        response = request(
+            self.url,
+            self.token,
+            "znamky"
+        )
+        if response["predmety"] is None:
+            raise BakalibError("Grades module returned None, no grades were found.")
+            return "grades_none"
+
+        subjects = []
+
         class Result(NamedTuple):
             subjects: list
 
@@ -329,28 +342,20 @@ class Grades(object):
             type_: str
             description: str
 
-        subjects = []
-
-        response = request(
-            self.url,
-            self.token,
-            "znamky"
-        )
-
         for subject in response["predmety"]["predmet"]:
             temp_list = []
             for grade in subject["znamky"]["znamka"]:
                 temp_list.append(Grade(
-                    grade.get("pred"),
-                    grade.get("maxb"),
-                    grade.get("znamka"),
-                    grade.get("zn"),
-                    grade.get("datum"),
-                    grade.get("udeleno"),
-                    grade.get("vaha"),
-                    grade.get("caption"),
-                    grade.get("typ"),
-                    grade.get("ozn")
+                        grade.get("pred"),
+                        grade.get("maxb"),
+                        grade.get("znamka"),
+                        grade.get("zn"),
+                        grade.get("datum"),
+                        grade.get("udeleno"),
+                        grade.get("vaha"),
+                        grade.get("caption"),
+                        grade.get("typ"),
+                        grade.get("ozn")
                 ))
             subjects.append(temp_list)
         return Result(subjects)
