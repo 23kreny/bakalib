@@ -11,6 +11,8 @@ import requests
 import urllib3
 import xmltodict
 
+name = "bakalib"
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -21,23 +23,18 @@ class BakalibError(Exception):
 class Municipality:
     '''
     Provides info about all schools that use the Bakaláři system.\n
-    Navigate through it like a dictionary:\n
         >>> m = Municipality()
-        >>> hodonin = m.cities["Hodonín"]
-        >>> for school in hodonin:
-        >>>     for name in school:
-        >>>        domain = school[name]
-        >>>         print("{}: {}".format(name, domain))
-        Základní škola Hodonín, U Červených domků 40: bakalari.zsdomkyhod.cz:8088/bakaweb
-        Základní škola Hodonín, Vančurova 2, příspěvková organizace: zsvancur.bakalari.cz
-        Základní škola Hodonín, Mírové náměstí 19: zshodonin.bakalari.cz/bakaweb
-        Střední škola průmyslová a umělecká, Hodonín, Brandlova 32: prumyslovka.bakalari.cz:446/bakaweb
+        >>> for city in m.cities:
+        >>>     print(city.name)
+        >>>     for school in city.schools:
+        >>>         print(school.name)
+        >>>         print(school.domain)
     Methods:\n
             build(): Builds the local database from the 'https://sluzby.bakalari.cz/api/v1/municipality'.
                      Library comes prepackaged with the database json.
                      Use only when needed.
     '''
-    conf_dir = pathlib.Path.home().joinpath(".bakalib")
+    conf_dir = pathlib.Path(__file__).parent.joinpath("data")
     schooldb_file = conf_dir.joinpath("schooldb.json")
 
     def __init__(self):
@@ -45,9 +42,30 @@ class Municipality:
         if not self.conf_dir.is_dir():
             self.conf_dir.mkdir()
         if self.schooldb_file.is_file():
-            self.cities = json.loads(self.schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
+            cities = json.loads(self.schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
         else:
-            self.cities = self.rebuild()
+            cities = self.build()
+
+        class City(NamedTuple):
+            name: str
+            schools: list
+
+        class School(NamedTuple):
+            name: str
+            domain: str
+
+        cities_list = []
+
+        for city in cities:
+            schools_list = []
+
+            for school in cities[city]:
+                for name in school:
+                    if name:
+                        schools_list.append(School(name, school[name]))
+            cities_list.append(City(city, schools_list))
+
+        self.cities = cities_list
 
     def build(self) -> dict:
         from time import sleep
@@ -71,7 +89,7 @@ class Municipality:
                         domain = re.sub("((/)?login.aspx(/)?)?", "", domain).rstrip("/")
                         schooldb[city_name].append({school_name: domain})
                 sleep(0.05)
-        schooldb_file.write_text(json.dumps(schooldb, indent=4, sort_keys=True), encoding='utf-8')
+        self.schooldb_file.write_text(json.dumps(schooldb, indent=4, sort_keys=True), encoding='utf-8')
         return schooldb
 
 
