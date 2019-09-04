@@ -236,6 +236,7 @@ class Timetable(object):
             "rozvrh",
             "{:04}{:02}{:02}".format(date.year, date.month, date.day)
         )
+
         class Result(NamedTuple):
             headers: list
             days: list
@@ -244,6 +245,11 @@ class Timetable(object):
             caption: str
             begintime: str
             endtime: str
+
+        class Day(NamedTuple):
+            abbr: str
+            date: str
+            lessons: list
 
         class Lesson(NamedTuple):
             idcode: str
@@ -298,7 +304,7 @@ class Timetable(object):
                     lesson.get("caption"),
                     lesson.get("notice"),
                 ))
-            days.append(temp_list)
+            days.append(Day(day["zkratka"], day["datum"], temp_list))
         return Result(headers, days)
 
 
@@ -359,8 +365,3 @@ class Grades(object):
                 ))
             subjects.append(temp_list)
         return Result(subjects)
-
-
-if __name__ == "__main__":
-    import paths
-    user = Client(username="xKrone97645", auth_file=paths.auth_file)
