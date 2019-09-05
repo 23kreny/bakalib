@@ -1,1 +1,1 @@
-recursive-include bakalib/data *
+include bakalib/data/schooldb.json
