@@ -1,11 +1,11 @@
 import setuptools
 
-with open("README.md", "r") as readme:
+with open("README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
 
 setuptools.setup(
     name="bakalib",
-    version="0.0.1",
+    version="0.0.2",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A library for accessing the module data of Bakaláři school system easily",
@@ -18,5 +18,10 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6'
+    python_requires='>=3.6',
+    install_requires=[
+        "lxml",
+        "requests",
+        "xmltodict"
+    ]
 )
