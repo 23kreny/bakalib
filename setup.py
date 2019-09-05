@@ -5,10 +5,10 @@ with open("README.md", "r") as readme:
 
 setuptools.setup(
     name="bakalib",
-    version="1.0",
+    version="0.0.1",
     author="kreny",
     author_email="kronerm9@gmail.com",
-    description="A library for accessing the Bakaláři school system easily",
+    description="A library for accessing the module data of Bakaláři school system easily",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/23kreny/bakalib",

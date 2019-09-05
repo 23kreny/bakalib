@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: bakalib
+Version: 0.0.1
+Summary: A library for accessing the module data of Bakaláři school system easily
+Home-page: https://github.com/23kreny/bakalib
+Author: kreny
+Author-email: kronerm9@gmail.com
+License: UNKNOWN
+Description: # BakalÃ¡Å™i Python Library
+        A library for accessing 'BakalÃ¡Å™i' school system easily.
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

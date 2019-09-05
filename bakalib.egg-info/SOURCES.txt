@@ -1,0 +1,7 @@
+README.md
+setup.py
+bakalib/__init__.py
+bakalib.egg-info/PKG-INFO
+bakalib.egg-info/SOURCES.txt
+bakalib.egg-info/dependency_links.txt
+bakalib.egg-info/top_level.txt
