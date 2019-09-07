@@ -6,10 +6,10 @@ import pathlib
 import re
 from typing import NamedTuple
 
-import lxml.etree as ET
 import requests
 import urllib3
 import xmltodict
+import cachetools
 
 name = "bakalib"
 
@@ -30,67 +30,64 @@ class Municipality:
         >>>         print(school.name)
         >>>         print(school.domain)
     Methods:\n
-            build(): Builds the local database from the 'https://sluzby.bakalari.cz/api/v1/municipality'.
+            build(): Builds the local database from 'https://sluzby.bakalari.cz/api/v1/municipality'.
                      Library comes prepackaged with the database json.
                      Use only when needed.
     '''
     conf_dir = pathlib.Path(__file__).parent.joinpath("data")
-    schooldb_file = conf_dir.joinpath("schooldb.json")
+    db_file = conf_dir.joinpath("municipality.json")
+
+    class City(NamedTuple):
+        name: str
+        school_count: str
+        schools: list
+
+    class School(NamedTuple):
+        id: str
+        name: str
+        domain: str
 
     def __init__(self):
         super().__init__()
         if not self.conf_dir.is_dir():
             self.conf_dir.mkdir()
-        if self.schooldb_file.is_file():
-            cities = json.loads(self.schooldb_file.read_text(encoding='utf-8'), encoding='utf-8')
+        if self.db_file.is_file():
+            self.cities = [
+                self.City(
+                    city[0],
+                    city[1],
+                    [
+                        self.School(
+                            school[0],
+                            school[1],
+                            school[2]
+                        ) for school in city[2]
+                    ]
+                ) for city in json.loads(self.db_file.read_text(encoding='utf-8'), encoding='utf-8')
+            ]
         else:
-            cities = self.build()
-
-        class City(NamedTuple):
-            name: str
-            schools: list
-
-        class School(NamedTuple):
-            name: str
-            domain: str
-
-        cities_list = []
-
-        for city in cities:
-            schools_list = []
-
-            for school in cities[city]:
-                for name in school:
-                    if name:
-                        schools_list.append(School(name, school[name]))
-            cities_list.append(City(city, schools_list))
-
-        self.cities = cities_list
+            self.cities = self.build()
 
     def build(self) -> dict:
-        from time import sleep
+        import lxml.etree as ET
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
-        schooldb = {}
-        rc = requests.get(url, stream=True)
-        rc.raw.decode_content = True
-        cities_xml = ET.parse(rc.raw, parser=parser)
-        for municInfo in cities_xml.iter("municipalityInfo"):
-            city_name = municInfo.find("name").text
-            if city_name:
-                schooldb[city_name] = []
-                rs = requests.get(url + requests.utils.quote(city_name), stream=True)
-                rs.raw.decode_content = True
-                school_xml = ET.parse(rs.raw, parser=parser)
-                for school in school_xml.iter("schoolInfo"):
-                    school_name = school.find("name").text
-                    if school_name:
-                        domain = re.sub("http(s)?://(www.)?", "", school.find("schoolUrl").text)
-                        domain = re.sub("((/)?login.aspx(/)?)?", "", domain).rstrip("/")
-                        schooldb[city_name].append({school_name: domain})
-                sleep(0.05)
-        self.schooldb_file.write_text(json.dumps(schooldb, indent=4, sort_keys=True), encoding='utf-8')
-        return schooldb
+
+        cities = [
+            self.City(
+                municInfo.find("name").text,
+                municInfo.find("schoolCount").text,
+                [
+                    self.School(
+                        school.find("id").text,
+                        school.find("name").text,
+                        re.sub("((/)?login.aspx(/)?)?", "", re.sub("http(s)?://(www.)?", "", school.find("schoolUrl").text)).rstrip("/")
+                    ) for school in ET.fromstring(requests.get(url + requests.utils.quote(municInfo.find("name").text), stream=True).content, parser=parser).iter("schoolInfo") if school.find("name").text
+                ]
+            ) for municInfo in ET.fromstring(requests.get(url, stream=True).content, parser=parser).iter("municipalityInfo") if municInfo.find("name").text
+        ]
+        self.db_file.write_text(json.dumps(cities, indent=4, sort_keys=True), encoding='utf-8')
+        return cities
 
 
 def request(url: str, token: str, *args) -> dict:
@@ -100,102 +97,73 @@ def request(url: str, token: str, *args) -> dict:
     Returns a response `lxml.etree._Element`
     '''
     if args is None or len(args) > 2:
-        raise ValueError("Bad arguments")
-        return None
+        raise BakalibError("Bad arguments")
     params = {"hx": token, "pm": args[0]}
     if len(args) > 1:
         params.update({"pmd": args[1]})
-    r = requests.get(url=url, params=params, verify=False, stream=True)
-    r.raw.decode_content = True
-    response = xmltodict.parse(r.raw)
+    r = requests.get(url=url, params=params, verify=False)
+    response = xmltodict.parse(r.content)
     try:
         if not response["results"]["result"] == "01":
-            raise LookupError("Received response is invalid.")
-            return None
+            raise BakalibError("Received response is invalid.")
     except KeyError:
-        raise LookupError("Wrong request")
-        return None
+        raise BakalibError("Wrong request")
     return response["results"]
 
 
 class Client(object):
-    def __init__(self, username: str, password=None, domain=None, auth_file=None):
+    def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
-        if auth_file:
-            if not password and not domain:
-                if auth_file.is_file():
-                    auth_dict = json.loads(auth_file.read_text(encoding='utf-8'), encoding='utf-8')
-                    isFound = False
-                    for user in auth_dict:
-                        if user["Username"] == username:
-                            self.url = user["URL"]
-                            self.token = self.__token(user["PermanentToken"])
-                            isFound = True
-                    if not isFound:
-                        raise BakalibError("Auth file was specified without password and domain, but it didn't contain the user")
-                else:
-                    raise BakalibError("Auth file was specified but not found")
-            else:
-                self.url = "https://{}/login.aspx".format(domain)
-                permtoken = self.__permanent_token(username, password)
-                if self.__is_token_valid(self.__token(permtoken)):
-                    auth_dict = [{"Username": username, "URL": self.url, "PermanentToken": permtoken}]
-                    auth_file.write_text(json.dumps(auth_dict, indent=4), encoding='utf-8')
-                    self.token = self.__token(permtoken)
-                else:
-                    raise BakalibError("Token is invalid. That often means the password is wrong")
-        elif password and domain:
-            self.url = "https://{}/login.aspx".format(domain)
-            permtoken = self.__permanent_token(username, password)
-            if self.__is_token_valid(self.__token(permtoken)):
-                self.token = self.__token(permtoken)
-            else:
+        self.url = "https://{}/login.aspx".format(domain)
+
+        if password:
+            self.perm_token = self.__permanent_token(username, password)
+            token = self.__token(self.perm_token)
+            if not self.__is_token_valid(token):
                 raise BakalibError("Token is invalid. That often means the password is wrong")
+            self.token = token
+        elif perm_token:
+            self.perm_token = perm_token
+            self.token = self.__token(self.perm_token)
         else:
             raise BakalibError("Incorrect arguments")
-            raise SystemExit("Exiting due to errors")
 
-        self.basic_info = self.__basic_info()
+        self.info = self.__info()
 
-    def __basic_info(self):
+    def __info(self):
         class Result(NamedTuple):
             version: str
             name: str
+            type_abbr: str
             type: str
-            type_name: str
-            school_name: str
+            school: str
             school_type: str
             class_: str
             year: str
             modules: str
             newmarkdays: str
-        temp_list = []
 
         response = request(self.url, self.token, "login")
-
-        for element in response:
-            if not element == "result":
-                if element == "params":
-                    temp_list.append(response.get(element).get("newmarkdays"))
-                else:
-                    temp_list.append(response.get(element))
-        return Result(*temp_list)
+        result = Result(
+            *[
+                response.get(element).get("newmarkdays") if element == "params" else response.get(element)
+                for element in response if not element == "result"
+            ]
+        )
+        return result
 
     def __permanent_token(self, user: str, password: str) -> str:
         '''
         Generates a permanent access token with securely hashed password.\n
         Returns a `str` containing the token.
         '''
-        params = {"gethx": user}
-        r = requests.get(url=self.url, params=params, verify=False, stream=True)
-        r.raw.decode_content = True
-        xml = ET.parse(r.raw)
-        for result in xml.iter("results"):
-            if result.find("res").text == "02":
-                return "wrong username"
-            salt = result.find("salt").text
-            ikod = result.find("ikod").text
-            typ = result.find("typ").text
+        r = requests.get(url=self.url, params={"gethx": user}, verify=False)
+        xml = xmltodict.parse(r.content)
+        if not xml["results"]["res"] == "01":
+            return "wrong username"
+        salt = xml["results"]["salt"]
+        ikod = xml["results"]["ikod"]
+        typ = xml["results"]["typ"]
         salted_password = (salt + ikod + typ + password).encode("utf-8")
         hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
         permtoken = "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
@@ -227,6 +195,8 @@ class Client(object):
 
 
 class Timetable(object):
+    cache = cachetools.TTLCache(60, 300)
+
     def __init__(self, url, token):
         super().__init__()
         self.url = url
@@ -240,14 +210,15 @@ class Timetable(object):
         return self.date_week(self.date)
 
     def this_week(self):
-        return self.date_week()
+        return self.date_week(datetime.date.today())
 
     def next_week(self):
         self.date = self.date + datetime.timedelta(7)
         return self.date_week(self.date)
   # #endregion
 
-    def date_week(self, date=datetime.date.today()):
+    @cachetools.cached(cache)
+    def date_week(self, date):
         response = request(
             self.url,
             self.token,
@@ -261,8 +232,8 @@ class Timetable(object):
 
         class Header(NamedTuple):
             caption: str
-            begintime: str
-            endtime: str
+            time_begin: str
+            time_end: str
 
         class Day(NamedTuple):
             abbr: str
@@ -286,52 +257,48 @@ class Timetable(object):
             cycle: str
             disengaged: str
             change_description: str
-            caption: str
             notice: str
+            caption: str
+            time_begin: str
+            time_end: str
 
-        headers = []
-        days = []
-
-
-        for lesson in response["rozvrh"]["hodiny"]["hod"]:
-            headers.append(Header(
-                lesson["caption"],
-                lesson["begintime"],
-                lesson["endtime"],
-            ))
-        for day in response["rozvrh"]["dny"]["den"]:
-            temp_list = []
-            for lesson in day["hodiny"]["hod"]:
-                temp_list.append(Lesson(
-                    lesson.get("idcode"),
-                    lesson.get("typ"),
-                    lesson.get("zkrpr"),
-                    lesson.get("pr"),
-                    lesson.get("zkruc"),
-                    lesson.get("uc"),
-                    lesson.get("zkrmist"),
-                    lesson.get("mist"),
-                    lesson.get("zkrabs"),
-                    lesson.get("abs"),
-                    lesson.get("tema"),
-                    lesson.get("zkrskup"),
-                    lesson.get("skup"),
-                    lesson.get("cycle"),
-                    lesson.get("uvol"),
-                    lesson.get("chng"),
-                    lesson.get("caption"),
-                    lesson.get("notice"),
-                ))
-            days.append(Day(day["zkratka"], day["datum"], temp_list))
+        headers = [
+            Header(
+                header["caption"],
+                header["begintime"],
+                header["endtime"]
+            ) for header in response["rozvrh"]["hodiny"]["hod"]
+        ]
+        days = [
+            Day(day["zkratka"], day["datum"],
+                [
+                    Lesson(
+                        lesson.get("idcode"), lesson.get("typ"),
+                        lesson.get("zkrpr"), lesson.get("pr"),
+                        lesson.get("zkruc"), lesson.get("uc"),
+                        lesson.get("zkrmist"), lesson.get("mist"),
+                        lesson.get("zkrabs"), lesson.get("abs"),
+                        lesson.get("tema"), lesson.get("zkrskup"),
+                        lesson.get("skup"), lesson.get("cycle"),
+                        lesson.get("uvol"), lesson.get("chng"),
+                        lesson.get("notice"), header.caption,
+                        header.time_begin, header.time_end
+                    ) for header, lesson in zip(headers, day["hodiny"]["hod"])
+                ]
+            ) for day in response["rozvrh"]["dny"]["den"]
+        ]
         return Result(headers, days)
 
 
 class Grades(object):
+    cache = cachetools.TTLCache(5, 300)
+
     def __init__(self, url, token):
         super().__init__()
         self.url = url
         self.token = token
 
+    @cachetools.cached(cache)
     def grades(self):
         response = request(
             self.url,
@@ -339,10 +306,8 @@ class Grades(object):
             "znamky"
         )
         if response["predmety"] is None:
-            raise BakalibError("Grades module returned None, no grades were found.")
-            return "grades_none"
-
-        subjects = []
+            BakalibError("Grades module returned None, no grades were found.")
+            return None
 
         class Result(NamedTuple):
             subjects: list
@@ -366,10 +331,14 @@ class Grades(object):
             type_: str
             description: str
 
-        for subject in response["predmety"]["predmet"]:
-            temp_list = []
-            for grade in subject["znamky"]["znamka"]:
-                temp_list.append(Grade(
+        subjects = [
+            Subject(
+                subject["nazev"],
+                subject["zkratka"],
+                subject["prumer"],
+                subject["numprumer"],
+                [
+                    Grade(
                         grade.get("pred"),
                         grade.get("maxb"),
                         grade.get("znamka"),
@@ -380,6 +349,8 @@ class Grades(object):
                         grade.get("caption"),
                         grade.get("typ"),
                         grade.get("ozn")
-                ))
-            subjects.append(temp_list)
+                    ) for grade in subject["znamky"]["znamka"]
+                ]
+            ) for subject in response["predmety"]["predmet"]
+        ]
         return Result(subjects)
