@@ -6,10 +6,10 @@ import pathlib
 import re
 from typing import NamedTuple
 
+import cachetools
 import requests
 import urllib3
 import xmltodict
-import cachetools
 
 name = "bakalib"
 
@@ -93,8 +93,7 @@ class Municipality:
 def request(url: str, token: str, *args) -> dict:
     '''
     Make a GET request to school URL.\n
-    Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.\n
-    Returns a response `lxml.etree._Element`
+    Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.
     '''
     if args is None or len(args) > 2:
         raise BakalibError("Bad arguments")
@@ -112,6 +111,14 @@ def request(url: str, token: str, *args) -> dict:
 
 
 class Client(object):
+    '''
+    Creates an instance with access to basic information of the user.
+    >>> user = Client(username="Username12345", domain="domain.example.com", password="1234abcd")
+    >>> user = Client(username="Username12345", domain="domain.example.com", perm_token="*login*Username12345*pwd*abcdefgh12345678+jklm==*sgn*ANDR")
+    Methods:
+        info(): Obtains basic information about the user.
+        add_modules(*args): Extends the functionality with another module/s.
+    '''
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
         self.url = "https://{}/login.aspx".format(domain)
@@ -127,30 +134,6 @@ class Client(object):
             self.token = self.__token(self.perm_token)
         else:
             raise BakalibError("Incorrect arguments")
-
-        self.info = self.__info()
-
-    def __info(self):
-        class Result(NamedTuple):
-            version: str
-            name: str
-            type_abbr: str
-            type: str
-            school: str
-            school_type: str
-            class_: str
-            year: str
-            modules: str
-            newmarkdays: str
-
-        response = request(self.url, self.token, "login")
-        result = Result(
-            *[
-                response.get(element).get("newmarkdays") if element == "params" else response.get(element)
-                for element in response if not element == "result"
-            ]
-        )
-        return result
 
     def __permanent_token(self, user: str, password: str) -> str:
         '''
@@ -181,7 +164,40 @@ class Client(object):
             return False
         return True
 
+    def info(self):
+        '''
+        Obtains basic information about the user into a NamedTuple.
+        >>> user.info.name
+        >>> user.info.class_ # <-- due to class being reserved keyword.
+        >>> user.info.school
+        '''
+        class Result(NamedTuple):
+            version: str
+            name: str
+            type_abbr: str
+            type: str
+            school: str
+            school_type: str
+            class_: str
+            year: str
+            modules: str
+            newmarkdays: str
+
+        response = request(self.url, self.token, "login")
+        result = Result(
+                *[
+                    response.get(element).get("newmarkdays") if element == "params" else response.get(element)
+                    for element in response if not element == "result"
+                ]
+        )
+        return result
+
     def add_modules(self, *modules):
+        '''
+        Extends the functionality of the Client class with another module(s).
+        >>> user.add_modules("timetable", "grades")
+        >>> user.timetable.this_week()
+        '''
         if modules:
             for module in modules:
                 if module == "timetable":
@@ -195,6 +211,15 @@ class Client(object):
 
 
 class Timetable(object):
+    '''
+    Obtains information from the "rozvrh" module of Bakaláři.
+    >>> timetable = Timetable(url, token)
+    Methods:
+        prev_week(): Decrements self.date by 7 days and points to date_week(self.date).
+        this_week(): Points to date_week() with current date.
+        next_week(): Increments self.date by 7 days and points to date_week(self.date).
+        date_week(date): Obtains all timetable data about the week of the provided date.
+    '''
     cache = cachetools.TTLCache(60, 300)
 
     def __init__(self, url, token):
@@ -219,6 +244,17 @@ class Timetable(object):
 
     @cachetools.cached(cache)
     def date_week(self, date):
+        '''
+        Obtains all timetable data about the week of the provided date.
+        >>> this_week = timetable.date_week(datetime.date.today())
+        >>> for header in this_week.headers:
+        >>>     header.caption
+        >>> for day in this_week.days:
+        >>>     day.abbr
+        >>>     for lesson in day.lessons:
+        >>>         lesson.name
+        >>>         lesson.teacher
+        '''
         response = request(
             self.url,
             self.token,
@@ -242,7 +278,7 @@ class Timetable(object):
 
         class Lesson(NamedTuple):
             idcode: str
-            type_: str
+            type: str
             abbr: str
             name: str
             teacher_abbr: str
@@ -291,6 +327,12 @@ class Timetable(object):
 
 
 class Grades(object):
+    '''
+    Obtains information from the "znamky" module of Bakaláři.
+    >>> grades = Grades(url, token)
+    Methods:
+        grades(): Obtains all grades.
+    '''
     cache = cachetools.TTLCache(5, 300)
 
     def __init__(self, url, token):
@@ -300,6 +342,14 @@ class Grades(object):
 
     @cachetools.cached(cache)
     def grades(self):
+        '''
+        Obtains all grades.
+        >>> for subject in grades.grades().subjects:
+        >>>     subject.name
+        >>>     for grade in subject.grades:
+        >>>         grade.caption
+        >>>         grade.grade
+        '''
         response = request(
             self.url,
             self.token,
@@ -328,7 +378,7 @@ class Grades(object):
             date_granted: str
             weight: str
             caption: str
-            type_: str
+            type: str
             description: str
 
         subjects = [
