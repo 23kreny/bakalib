@@ -273,6 +273,7 @@ class Timetable(object):
         class Result(NamedTuple):
             headers: list
             days: list
+            cycle_name: str
 
         class Header(NamedTuple):
             caption: str
@@ -331,7 +332,7 @@ class Timetable(object):
             ]
             ) for day in response["rozvrh"]["dny"]["den"]
         ]
-        return Result(headers, days)
+        return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
 
 class Grades(object):
