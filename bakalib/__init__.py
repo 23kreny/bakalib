@@ -81,12 +81,14 @@ class Municipality:
                     self.School(
                         school.find("id").text,
                         school.find("name").text,
-                        re.sub("((/)?login.aspx(/)?)?", "", re.sub("http(s)?://(www.)?", "", school.find("schoolUrl").text)).rstrip("/")
+                        re.sub("((/)?login.aspx(/)?)?", "", re.sub("http(s)?://(www.)?",
+                                                                   "", school.find("schoolUrl").text)).rstrip("/")
                     ) for school in ET.fromstring(requests.get(url + requests.utils.quote(municInfo.find("name").text), stream=True).content, parser=parser).iter("schoolInfo") if school.find("name").text
                 ]
             ) for municInfo in ET.fromstring(requests.get(url, stream=True).content, parser=parser).iter("municipalityInfo") if municInfo.find("name").text
         ]
-        self.db_file.write_text(json.dumps(cities, indent=4, sort_keys=True), encoding='utf-8')
+        self.db_file.write_text(json.dumps(
+            cities, indent=4, sort_keys=True), encoding='utf-8')
         return cities
 
 
@@ -104,7 +106,7 @@ def request(url: str, token: str, *args) -> dict:
     response = xmltodict.parse(r.content)
     try:
         if not response["results"]["result"] == "01":
-            raise BakalibError("Received response is invalid.")
+            raise BakalibError("Received response is invalid")
     except KeyError:
         raise BakalibError("Wrong request")
     return response["results"]
@@ -119,6 +121,7 @@ class Client(object):
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
+
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
         self.url = "https://{}/login.aspx".format(domain)
@@ -127,7 +130,7 @@ class Client(object):
             self.perm_token = self.__permanent_token(username, password)
             token = self.__token(self.perm_token)
             if not self.__is_token_valid(token):
-                raise BakalibError("Token is invalid. That often means the password is wrong")
+                raise BakalibError("Token is invalid\nInvalid password")
             self.token = token
         elif perm_token:
             self.perm_token = perm_token
@@ -143,13 +146,15 @@ class Client(object):
         r = requests.get(url=self.url, params={"gethx": user}, verify=False)
         xml = xmltodict.parse(r.content)
         if not xml["results"]["res"] == "01":
-            return "wrong username"
+            raise BakalibError("Invalid username")
         salt = xml["results"]["salt"]
         ikod = xml["results"]["ikod"]
         typ = xml["results"]["typ"]
         salted_password = (salt + ikod + typ + password).encode("utf-8")
-        hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
-        permtoken = "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
+        hashed_password = base64.b64encode(
+            hashlib.sha512(salted_password).digest())
+        permtoken = "*login*" + user + "*pwd*" + \
+            hashed_password.decode("utf8") + "*sgn*ANDR"
         return permtoken
 
     def __token(self, permtoken: str) -> str:
@@ -160,16 +165,18 @@ class Client(object):
         return token
 
     def __is_token_valid(self, token: str) -> bool:
-        if not request(self.url, token, "login"):
+        try:
+            request(self.url, token, "login")
+            return True
+        except BakalibError:
             return False
-        return True
 
     def info(self):
         '''
         Obtains basic information about the user into a NamedTuple.
-        >>> user.info.name
-        >>> user.info.class_ # <-- due to class being reserved keyword.
-        >>> user.info.school
+        >>> user.info().name
+        >>> user.info().class_ # <-- due to class being reserved keyword.
+        >>> user.info().school
         '''
         class Result(NamedTuple):
             version: str
@@ -185,10 +192,11 @@ class Client(object):
 
         response = request(self.url, self.token, "login")
         result = Result(
-                *[
-                    response.get(element).get("newmarkdays") if element == "params" else response.get(element)
-                    for element in response if not element == "result"
-                ]
+            *[
+                response.get(element).get(
+                    "newmarkdays") if element == "params" else response.get(element)
+                for element in response if not element == "result"
+            ]
         )
         return result
 
@@ -226,20 +234,20 @@ class Timetable(object):
         super().__init__()
         self.url = url
         self.token = token
-        self.date = datetime.date.today()
+        self.today = datetime.date.today()
 
   # #region `Convenience methods - self.prev_week(), self.this_week(), self.next_week()`
 
     def prev_week(self):
-        self.date = self.date - datetime.timedelta(7)
-        return self.date_week(self.date)
+        date = self.today - datetime.timedelta(7)
+        return self.date_week(date)
 
     def this_week(self):
-        return self.date_week(datetime.date.today())
+        return self.date_week(self.today + datetime.timedelta(days=-self.today.weekday(), weeks=1))
 
     def next_week(self):
-        self.date = self.date + datetime.timedelta(7)
-        return self.date_week(self.date)
+        date = self.today + datetime.timedelta(7)
+        return self.date_week(date)
   # #endregion
 
     @cachetools.cached(cache)
@@ -320,7 +328,7 @@ class Timetable(object):
                         lesson.get("notice"), header.caption,
                         header.time_begin, header.time_end
                     ) for header, lesson in zip(headers, day["hodiny"]["hod"])
-                ]
+            ]
             ) for day in response["rozvrh"]["dny"]["den"]
         ]
         return Result(headers, days)
@@ -381,6 +389,7 @@ class Grades(object):
             type: str
             description: str
 
+        print(response["predmety"]["predmet"])
         subjects = [
             Subject(
                 subject["nazev"],
