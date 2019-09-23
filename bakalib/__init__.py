@@ -124,7 +124,9 @@ class Client(object):
 
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
-        self.url = "https://{}/login.aspx".format(domain)
+        self.username = username
+        self.domain = domain
+        self.url = "https://{}/login.aspx".format(self.domain)
 
         if password:
             self.perm_token = self.__permanent_token(username, password)
@@ -153,14 +155,14 @@ class Client(object):
         salted_password = (salt + ikod + typ + password).encode("utf-8")
         hashed_password = base64.b64encode(
             hashlib.sha512(salted_password).digest())
-        permtoken = "*login*" + user + "*pwd*" + \
+        perm_token = "*login*" + user + "*pwd*" + \
             hashed_password.decode("utf8") + "*sgn*ANDR"
-        return permtoken
+        return perm_token
 
-    def __token(self, permtoken: str) -> str:
+    def __token(self, perm_token: str) -> str:
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
-        hash = hashlib.sha512((permtoken + datecode).encode("utf-8")).digest()
+        hash = hashlib.sha512((perm_token + datecode).encode("utf-8")).digest()
         token = base64.urlsafe_b64encode(hash).decode("utf-8")
         return token
 
