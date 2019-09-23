@@ -121,6 +121,7 @@ class Client(object):
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
+    cache = cachetools.TTLCache(2, 300)
 
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
@@ -173,6 +174,7 @@ class Client(object):
         except BakalibError:
             return False
 
+    @cachetools.cached(cache)
     def info(self):
         '''
         Obtains basic information about the user into a NamedTuple.
