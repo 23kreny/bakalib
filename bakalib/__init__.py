@@ -131,17 +131,20 @@ class Client(object):
         self.domain = domain
         self.url = "https://{}/login.aspx".format(self.domain)
 
-        if password:
+        if perm_token:
+            self.perm_token = perm_token
+            self.token = self.__token(self.perm_token)
+        elif password:
             self.perm_token = self.__permanent_token(username, password)
             token = self.__token(self.perm_token)
             if not self.__is_token_valid(token):
                 raise BakalibError("Token is invalid\nInvalid password")
             self.token = token
-        elif perm_token:
-            self.perm_token = perm_token
-            self.token = self.__token(self.perm_token)
         else:
             raise BakalibError("Incorrect arguments")
+
+        self.thread = Thread(target=self._info)
+        self.thread.start()
 
     def __permanent_token(self, user: str, password: str) -> str:
         '''
@@ -176,8 +179,13 @@ class Client(object):
         except BakalibError:
             return False
 
-    @cachetools.cached(cache)
     def info(self):
+        if self.thread.is_alive():
+            self.thread.join()
+        return self._info()
+
+    @cachetools.cached(cache)
+    def _info(self):
         '''
         Obtains basic information about the user into a NamedTuple.
         >>> user.info().name
