@@ -5,6 +5,8 @@ import json
 import pathlib
 import re
 from typing import NamedTuple
+from threading import Thread
+from concurrent.futures.thread import ThreadPoolExecutor
 
 import cachetools
 import requests
@@ -108,7 +110,7 @@ def request(url: str, token: str, *args) -> dict:
         if not response["results"]["result"] == "01":
             raise BakalibError("Received response is invalid")
     except KeyError:
-        raise BakalibError("Wrong request")
+        raise BakalibError("Wrong request/buggy xml")
     return response["results"]
 
 
@@ -121,7 +123,7 @@ class Client(object):
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
-    cache = cachetools.TTLCache(2, 300)
+    cache = cachetools.TTLCache(1, 300)
 
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
@@ -232,30 +234,45 @@ class Timetable(object):
         next_week(): Increments self.date by 7 days and points to date_week(self.date).
         date_week(date): Obtains all timetable data about the week of the provided date.
     '''
-    cache = cachetools.TTLCache(60, 300)
+    cache = cachetools.LFUCache(20)
 
-    def __init__(self, url, token):
+    def __init__(self, url, token, date=datetime.date.today()):
         super().__init__()
         self.url = url
         self.token = token
-        self.today = datetime.date.today()
+        self.date = date
 
-  # #region `Convenience methods - self.prev_week(), self.this_week(), self.next_week()`
+        self.threadpool = ThreadPoolExecutor(max_workers=8)
+        self.threadpool.submit(self._date_week, self.date)
+
+    # ------- convenience methods -------
 
     def prev_week(self):
-        date = self.today - datetime.timedelta(7)
-        return self.date_week(date)
+        self.date = self.date - datetime.timedelta(7)
+        return self.date_week(self.date)
 
     def this_week(self):
-        return self.date_week(self.today + datetime.timedelta(days=-self.today.weekday(), weeks=1))
+        self.date = datetime.date.today()
+        return self.date_week(self.date)
 
     def next_week(self):
-        date = self.today + datetime.timedelta(7)
-        return self.date_week(date)
-  # #endregion
+        self.date = self.date + datetime.timedelta(7)
+        return self.date_week(self.date)
+
+    # -----------------------------------
+
+    def date_week(self, date=None):
+        self.date = date if date else self.date
+        self.threadpool.shutdown(wait=True)
+        self.threadpool = ThreadPoolExecutor(max_workers=8)
+        self.threadpool.submit(
+            self._date_week, self.date - datetime.timedelta(7))
+        self.threadpool.submit(
+            self._date_week, self.date + datetime.timedelta(7))
+        return self._date_week(self.date)
 
     @cachetools.cached(cache)
-    def date_week(self, date):
+    def _date_week(self, date):
         '''
         Obtains all timetable data about the week of the provided date.
         >>> this_week = timetable.date_week(datetime.date.today())
@@ -319,42 +336,58 @@ class Timetable(object):
             ) for header in response["rozvrh"]["hodiny"]["hod"]
         ]
         days = [
-            Day(day["zkratka"], day["datum"],
-                [
-                    Lesson(
-                        lesson.get("idcode"), lesson.get("typ"),
-                        lesson.get("zkrpr"), lesson.get("pr"),
-                        lesson.get("zkruc"), lesson.get("uc"),
-                        lesson.get("zkrmist"), lesson.get("mist"),
-                        lesson.get("zkrabs"), lesson.get("abs"),
-                        lesson.get("tema"), lesson.get("zkrskup"),
-                        lesson.get("skup"), lesson.get("cycle"),
-                        lesson.get("uvol"), lesson.get("chng"),
-                        lesson.get("notice"), header.caption,
-                        header.time_begin, header.time_end
-                    ) for header, lesson in zip(headers, day["hodiny"]["hod"])
-            ]
+            Day(
+                day["zkratka"],
+                day["datum"],
+                [Lesson(
+                    lesson.get("idcode"), lesson.get("typ"),
+                    lesson.get("zkrpr"), lesson.get("pr"),
+                    lesson.get("zkruc"), lesson.get("uc"),
+                    lesson.get("zkrmist"), lesson.get("mist"),
+                    lesson.get("zkrabs"), lesson.get("abs"),
+                    lesson.get("tema"), lesson.get("zkrskup"),
+                    lesson.get("skup"), lesson.get("cycle"),
+                    lesson.get("uvol"), lesson.get("chng"),
+                    lesson.get("notice"), header.caption,
+                    header.time_begin, header.time_end
+                ) for header, lesson in zip(headers, day["hodiny"]["hod"])]
             ) for day in response["rozvrh"]["dny"]["den"]
         ]
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
+
+    def wipe_cache(self):
+        self.cache.clear()
 
 
 class Grades(object):
     '''
     Obtains information from the "znamky" module of Bakaláři.
     >>> grades = Grades(url, token)
+    >>> for subject in grades.subjects:
+    >>>     for grade in subject.grades:
+    >>>         print(grade.subject)
+    >>>         print(grade.caption)
+    >>>         print(grade.grade)
     Methods:
         grades(): Obtains all grades.
     '''
-    cache = cachetools.TTLCache(5, 300)
+    cache = cachetools.TTLCache(1, 300)
 
     def __init__(self, url, token):
         super().__init__()
         self.url = url
         self.token = token
 
-    @cachetools.cached(cache)
+        self.thread = Thread(target=self._grades)
+        self.thread.start()
+
     def grades(self):
+        if self.thread.is_alive():
+            self.thread.join()
+        return self._grades()
+
+    @cachetools.cached(cache)
+    def _grades(self):
         '''
         Obtains all grades.
         >>> for subject in grades.grades().subjects:
@@ -394,7 +427,6 @@ class Grades(object):
             type: str
             description: str
 
-        print(response["predmety"]["predmet"])
         subjects = [
             Subject(
                 subject["nazev"],
@@ -403,18 +435,21 @@ class Grades(object):
                 subject["numprumer"],
                 [
                     Grade(
-                        grade.get("pred"),
-                        grade.get("maxb"),
-                        grade.get("znamka"),
-                        grade.get("zn"),
-                        grade.get("datum"),
-                        grade.get("udeleno"),
-                        grade.get("vaha"),
-                        grade.get("caption"),
-                        grade.get("typ"),
-                        grade.get("ozn")
-                    ) for grade in subject["znamky"]["znamka"]
+                        subject["znamky"][grade].get("pred"),
+                        subject["znamky"][grade].get("maxb"),
+                        subject["znamky"][grade].get("znamka"),
+                        subject["znamky"][grade].get("zn"),
+                        subject["znamky"][grade].get("datum"),
+                        subject["znamky"][grade].get("udeleno"),
+                        subject["znamky"][grade].get("vaha"),
+                        subject["znamky"][grade].get("caption"),
+                        subject["znamky"][grade].get("typ"),
+                        subject["znamky"][grade].get("ozn")
+                    ) for grade in subject["znamky"]
                 ]
             ) for subject in response["predmety"]["predmet"]
         ]
         return Result(subjects)
+
+    def wipe_cache(self):
+        self.cache.clear()
