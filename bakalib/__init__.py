@@ -252,6 +252,9 @@ class Timetable(object):
 
         self.threadpool = ThreadPoolExecutor(max_workers=8)
         self.threadpool.submit(self._date_week, self.date)
+        self.threadpool.shutdown(wait=True)
+
+        self.this_week()
 
     # ------- convenience methods -------
 
