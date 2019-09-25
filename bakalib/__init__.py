@@ -123,7 +123,7 @@ class Client(object):
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
-    cache = cachetools.TTLCache(1, 300)
+    cache = cachetools.Cache(1)
 
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
@@ -133,11 +133,11 @@ class Client(object):
 
         if perm_token:
             self.perm_token = perm_token
-            self.token = self.__token(self.perm_token)
+            self.token = self._token(self.perm_token)
         elif password:
-            self.perm_token = self.__permanent_token(username, password)
-            token = self.__token(self.perm_token)
-            if not self.__is_token_valid(token):
+            self.perm_token = self._permanent_token(username, password)
+            token = self._token(self.perm_token)
+            if not self._is_token_valid(token):
                 raise BakalibError("Token is invalid\nInvalid password")
             self.token = token
         else:
@@ -146,7 +146,7 @@ class Client(object):
         self.thread = Thread(target=self._info)
         self.thread.start()
 
-    def __permanent_token(self, user: str, password: str) -> str:
+    def _permanent_token(self, user: str, password: str) -> str:
         '''
         Generates a permanent access token with securely hashed password.\n
         Returns a `str` containing the token.
@@ -165,19 +165,36 @@ class Client(object):
             hashed_password.decode("utf8") + "*sgn*ANDR"
         return perm_token
 
-    def __token(self, perm_token: str) -> str:
+    def _token(self, perm_token: str) -> str:
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
         hash = hashlib.sha512((perm_token + datecode).encode("utf-8")).digest()
         token = base64.urlsafe_b64encode(hash).decode("utf-8")
         return token
 
-    def __is_token_valid(self, token: str) -> bool:
+    def _is_token_valid(self, token: str) -> bool:
         try:
             request(self.url, token, "login")
             return True
         except BakalibError:
             return False
+
+    def add_modules(self, *modules):
+        '''
+        Extends the functionality of the Client class with another module(s).
+        >>> user.add_modules("timetable", "grades")
+        >>> user.timetable.this_week()
+        '''
+        if modules:
+            for module in modules:
+                if module == "timetable":
+                    self.timetable = Timetable(self.url, self.token)
+                elif module == "grades":
+                    self.grades = Grades(self.url, self.token)
+                else:
+                    raise BakalibError("Bad module name was provided")
+        else:
+            raise BakalibError("No modules were provided")
 
     def info(self):
         if self.thread.is_alive():
@@ -214,22 +231,9 @@ class Client(object):
         )
         return result
 
-    def add_modules(self, *modules):
-        '''
-        Extends the functionality of the Client class with another module(s).
-        >>> user.add_modules("timetable", "grades")
-        >>> user.timetable.this_week()
-        '''
-        if modules:
-            for module in modules:
-                if module == "timetable":
-                    self.timetable = Timetable(self.url, self.token)
-                elif module == "grades":
-                    self.grades = Grades(self.url, self.token)
-                else:
-                    raise BakalibError("Bad module name was provided")
-        else:
-            raise BakalibError("No modules were provided")
+    def refresh_cache(self):
+        self.cache.clear()
+        self.thread.start()
 
 
 class Timetable(object):
@@ -242,7 +246,7 @@ class Timetable(object):
         next_week(): Increments self.date by 7 days and points to date_week(self.date).
         date_week(date): Obtains all timetable data about the week of the provided date.
     '''
-    cache = cachetools.LFUCache(20)
+    cache = cachetools.Cache(30)
 
     def __init__(self, url, token, date=datetime.date.today()):
         super().__init__()
@@ -252,9 +256,6 @@ class Timetable(object):
 
         self.threadpool = ThreadPoolExecutor(max_workers=8)
         self.threadpool.submit(self._date_week, self.date)
-        self.threadpool.shutdown(wait=True)
-
-        self.this_week()
 
     # ------- convenience methods -------
 
@@ -366,15 +367,18 @@ class Timetable(object):
         ]
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
-    def wipe_cache(self):
+    def refresh_cache(self):
         self.cache.clear()
+        self.threadpool.shutdown(wait=False)
+        self.threadpool = ThreadPoolExecutor(max_workers=8)
+        self.threadpool.submit(self._date_week, self.date)
 
 
 class Grades(object):
     '''
     Obtains information from the "znamky" module of Bakaláři.
     >>> grades = Grades(url, token)
-    >>> for subject in grades.subjects:
+    >>> for subject in grades.grades().subjects:
     >>>     for grade in subject.grades:
     >>>         print(grade.subject)
     >>>         print(grade.caption)
@@ -382,7 +386,7 @@ class Grades(object):
     Methods:
         grades(): Obtains all grades.
     '''
-    cache = cachetools.TTLCache(1, 300)
+    cache = cachetools.Cache(1)
 
     def __init__(self, url, token):
         super().__init__()
@@ -413,8 +417,7 @@ class Grades(object):
             "znamky"
         )
         if response["predmety"] is None:
-            BakalibError("Grades module returned None, no grades were found.")
-            return None
+            raise BakalibError("Grades module returned None, no grades were found.")
 
         class Result(NamedTuple):
             subjects: list
@@ -462,5 +465,6 @@ class Grades(object):
         ]
         return Result(subjects)
 
-    def wipe_cache(self):
+    def refresh_cache(self):
         self.cache.clear()
+        self.thread.start()
