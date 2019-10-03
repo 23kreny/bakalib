@@ -424,7 +424,7 @@ class Grades(object):
 
         for subject in response["predmety"]["predmet"]:
             if subject["znamky"]["znamka"] is not list:
-                subject["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
+                response["predmety"]["predmet"][subject]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
 
         class Result(NamedTuple):
             subjects: list
