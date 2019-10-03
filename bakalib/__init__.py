@@ -275,13 +275,16 @@ class Timetable(object):
 
     def date_week(self, date=None):
         self.date = date if date else self.date
-        self.threadpool.shutdown(wait=True)
-        self.threadpool = ThreadPoolExecutor(max_workers=8)
-        self.threadpool.submit(
-            self._date_week, self.date - datetime.timedelta(7))
-        self.threadpool.submit(
-            self._date_week, self.date + datetime.timedelta(7))
-        return self._date_week(self.date)
+        if (self.date,) in self.cache:
+            return self._date_week(self.date)
+        else:
+            self.threadpool.shutdown(wait=True)
+            self.threadpool = ThreadPoolExecutor(max_workers=8)
+            self.threadpool.submit(
+                self._date_week, self.date - datetime.timedelta(7))
+            self.threadpool.submit(
+                self._date_week, self.date + datetime.timedelta(7))
+            return self._date_week(self.date)
 
     @cachetools.cached(cache)
     def _date_week(self, date):
@@ -419,6 +422,10 @@ class Grades(object):
         if response["predmety"] is None:
             raise BakalibError("Grades module returned None, no grades were found.")
 
+        for subject in response["predmety"]["predmet"]:
+            if subject["znamky"]["znamka"] is not list:
+                subject["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
+
         class Result(NamedTuple):
             subjects: list
 
@@ -449,17 +456,17 @@ class Grades(object):
                 subject["numprumer"],
                 [
                     Grade(
-                        subject["znamky"][grade].get("pred"),
-                        subject["znamky"][grade].get("maxb"),
-                        subject["znamky"][grade].get("znamka"),
-                        subject["znamky"][grade].get("zn"),
-                        subject["znamky"][grade].get("datum"),
-                        subject["znamky"][grade].get("udeleno"),
-                        subject["znamky"][grade].get("vaha"),
-                        subject["znamky"][grade].get("caption"),
-                        subject["znamky"][grade].get("typ"),
-                        subject["znamky"][grade].get("ozn")
-                    ) for grade in subject["znamky"]
+                        grade.get("pred"),
+                        grade.get("maxb"),
+                        grade.get("znamka"),
+                        grade.get("zn"),
+                        grade.get("datum"),
+                        grade.get("udeleno"),
+                        grade.get("vaha"),
+                        grade.get("caption"),
+                        grade.get("typ"),
+                        grade.get("ozn")
+                    ) for grade in subject["znamky"]["znamka"]
                 ]
             ) for subject in response["predmety"]["predmet"]
         ]
