@@ -148,8 +148,7 @@ class Client(object):
 
     def _permanent_token(self, user: str, password: str) -> str:
         '''
-        Generates a permanent access token with securely hashed password.\n
-        Returns a `str` containing the token.
+        Generates a permanent access token with securely hashed password.
         '''
         r = requests.get(url=self.url, params={"gethx": user}, verify=False)
         xml = xmltodict.parse(r.content)
@@ -166,6 +165,9 @@ class Client(object):
         return perm_token
 
     def _token(self, perm_token: str) -> str:
+        '''
+        Generates an access token using current time.
+        '''
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
         hash = hashlib.sha512((perm_token + datecode).encode("utf-8")).digest()
@@ -173,17 +175,23 @@ class Client(object):
         return token
 
     def _is_token_valid(self, token: str) -> bool:
+        '''
+        Checks for token validity.
+        '''
         try:
             request(self.url, token, "login")
             return True
         except BakalibError:
             return False
 
-    def add_modules(self, *modules):
+    def add_modules(self, *modules) -> None:
         '''
-        Extends the functionality of the Client class with another module(s).
+        Extends the functionality of the Client class with another module(s).\n
+        Supported modules: timetable, grades\n
+        WIP: absence
         >>> user.add_modules("timetable", "grades")
         >>> user.timetable.this_week()
+        >>> user.grades.grades()
         '''
         if modules:
             for module in modules:
@@ -197,18 +205,18 @@ class Client(object):
             raise BakalibError("No modules were provided")
 
     def info(self):
+        '''
+        Obtains basic information about the user into a NamedTuple.
+        >>> user.info().name
+        >>> user.info().class_ # <-- due to class being a reserved keyword.
+        >>> user.info().school
+        '''
         if self.thread.is_alive():
             self.thread.join()
         return self._info()
 
     @cachetools.cached(cache)
     def _info(self):
-        '''
-        Obtains basic information about the user into a NamedTuple.
-        >>> user.info().name
-        >>> user.info().class_ # <-- due to class being reserved keyword.
-        >>> user.info().school
-        '''
         class Result(NamedTuple):
             version: str
             name: str
@@ -241,9 +249,9 @@ class Timetable(object):
     Obtains information from the "rozvrh" module of Bakaláři.
     >>> timetable = Timetable(url, token)
     Methods:
-        prev_week(): Decrements self.date by 7 days and points to date_week(self.date).
+        prev_week(): Decrements self.date by 7 days and points to self.date_week.
         this_week(): Points to date_week() with current date.
-        next_week(): Increments self.date by 7 days and points to date_week(self.date).
+        next_week(): Increments self.date by 7 days and points to self.date_week.
         date_week(date): Obtains all timetable data about the week of the provided date.
     '''
     cache = cachetools.Cache(30)
@@ -257,7 +265,7 @@ class Timetable(object):
         self.threadpool = ThreadPoolExecutor(max_workers=8)
         self.threadpool.submit(self._date_week, self.date)
 
-    # ------- convenience methods -------
+    # ----------------------------------------------------
 
     def prev_week(self):
         self.date = self.date - datetime.timedelta(7)
@@ -271,9 +279,20 @@ class Timetable(object):
         self.date = self.date + datetime.timedelta(7)
         return self.date_week(self.date)
 
-    # -----------------------------------
+    # ----------------------------------------------------
 
     def date_week(self, date=None):
+        '''
+        Obtains all timetable data about the week of the provided date.
+        >>> this_week = timetable.date_week(datetime.date.today())
+        >>> for header in this_week.headers:
+        >>>     header.caption
+        >>> for day in this_week.days:
+        >>>     day.abbr
+        >>>     for lesson in day.lessons:
+        >>>         lesson.name
+        >>>         lesson.teacher
+        '''
         self.date = date if date else self.date
         if (self.date,) in self.cache:
             return self._date_week(self.date)
@@ -288,17 +307,6 @@ class Timetable(object):
 
     @cachetools.cached(cache)
     def _date_week(self, date):
-        '''
-        Obtains all timetable data about the week of the provided date.
-        >>> this_week = timetable.date_week(datetime.date.today())
-        >>> for header in this_week.headers:
-        >>>     header.caption
-        >>> for day in this_week.days:
-        >>>     day.abbr
-        >>>     for lesson in day.lessons:
-        >>>         lesson.name
-        >>>         lesson.teacher
-        '''
         response = request(
             self.url,
             self.token,
@@ -423,7 +431,7 @@ class Grades(object):
             raise BakalibError("Grades module returned None, no grades were found.")
 
         for index, subject in enumerate(response["predmety"]["predmet"]):
-            if subject["znamky"]["znamka"] is not list:
+            if not isinstance(subject["znamky"]["znamka"], list):
                 response["predmety"]["predmet"][index]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
 
         class Result(NamedTuple):
@@ -447,6 +455,7 @@ class Grades(object):
             caption: str
             type: str
             description: str
+            note: str
 
         subjects = [
             Subject(
@@ -465,7 +474,8 @@ class Grades(object):
                         grade.get("vaha"),
                         grade.get("caption"),
                         grade.get("typ"),
-                        grade.get("ozn")
+                        grade.get("ozn"),
+                        grade.get("poznamka")
                     ) for grade in subject["znamky"]["znamka"]
                 ]
             ) for subject in response["predmety"]["predmet"]
