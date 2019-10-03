@@ -400,12 +400,6 @@ class Grades(object):
         self.thread.start()
 
     def grades(self):
-        if self.thread.is_alive():
-            self.thread.join()
-        return self._grades()
-
-    @cachetools.cached(cache)
-    def _grades(self):
         '''
         Obtains all grades.
         >>> for subject in grades.grades().subjects:
@@ -414,6 +408,12 @@ class Grades(object):
         >>>         grade.caption
         >>>         grade.grade
         '''
+        if self.thread.is_alive():
+            self.thread.join()
+        return self._grades()
+
+    @cachetools.cached(cache)
+    def _grades(self):
         response = request(
             self.url,
             self.token,
@@ -422,9 +422,9 @@ class Grades(object):
         if response["predmety"] is None:
             raise BakalibError("Grades module returned None, no grades were found.")
 
-        for subject in response["predmety"]["predmet"]:
+        for index, subject in enumerate(response["predmety"]["predmet"]):
             if subject["znamky"]["znamka"] is not list:
-                response["predmety"]["predmet"][subject]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
+                response["predmety"]["predmet"][index]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
 
         class Result(NamedTuple):
             subjects: list
