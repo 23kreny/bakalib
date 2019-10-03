@@ -294,16 +294,14 @@ class Timetable(object):
         >>>         lesson.teacher
         '''
         self.date = date if date else self.date
-        if (self.date,) in self.cache:
-            return self._date_week(self.date)
-        else:
+        if not self.date in [i for item in self.cache for i in item]:
             self.threadpool.shutdown(wait=True)
             self.threadpool = ThreadPoolExecutor(max_workers=8)
-            self.threadpool.submit(
-                self._date_week, self.date - datetime.timedelta(7))
-            self.threadpool.submit(
-                self._date_week, self.date + datetime.timedelta(7))
-            return self._date_week(self.date)
+        self.threadpool.submit(
+            self._date_week, self.date - datetime.timedelta(7))
+        self.threadpool.submit(
+            self._date_week, self.date + datetime.timedelta(7))
+        return self._date_week(self.date)
 
     @cachetools.cached(cache)
     def _date_week(self, date):
