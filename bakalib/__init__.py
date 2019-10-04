@@ -94,12 +94,15 @@ class Municipality:
         return cities
 
 
+cache = cachetools.TTLCache(32, 300)
+
+@cachetools.cached(cache)
 def request(url: str, token: str, *args) -> dict:
     '''
     Make a GET request to school URL.\n
     Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.
     '''
-    if args is None or len(args) > 2:
+    if not args or len(args) > 2:
         raise BakalibError("Bad arguments")
     params = {"hx": token, "pm": args[0]}
     if len(args) > 1:
@@ -117,35 +120,36 @@ def request(url: str, token: str, *args) -> dict:
 class Client(object):
     '''
     Creates an instance with access to basic information of the user.
-    >>> user = Client(username="Username12345", domain="domain.example.com", password="1234abcd")
-    >>> user = Client(username="Username12345", domain="domain.example.com", perm_token="*login*Username12345*pwd*abcdefgh12345678+jklm==*sgn*ANDR")
+    >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", password="1234abcd")
+    >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", perm_token="*login*User12345*pwd*abcdefgh12345678+jklm==*sgn*ANDR")
+    >>> user.info()
     Methods:
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
-    cache = cachetools.Cache(1)
-
     def __init__(self, username: str, password=None, domain=None, perm_token=None):
         super().__init__()
         self.username = username
         self.domain = domain
         self.url = "https://{}/login.aspx".format(self.domain)
 
+        self.timetable = Timetable
+        self.grades = Grades
+
         if perm_token:
             self.perm_token = perm_token
-            self.token = self._token(self.perm_token)
+            token = self._token(self.perm_token)
         elif password:
             self.perm_token = self._permanent_token(username, password)
             token = self._token(self.perm_token)
-            if not self._is_token_valid(token):
-                raise BakalibError("Token is invalid\nInvalid password")
-            self.token = token
         else:
             raise BakalibError("Incorrect arguments")
 
-        self.thread = Thread(target=self._info)
-        self.thread.start()
-
+        if self._is_token_valid(token):
+            self.token = token
+        else:
+            raise BakalibError("Token is invalid: Invalid password/perm_token")
+            
     def _permanent_token(self, user: str, password: str) -> str:
         '''
         Generates a permanent access token with securely hashed password.
@@ -196,9 +200,11 @@ class Client(object):
         if modules:
             for module in modules:
                 if module == "timetable":
-                    self.timetable = Timetable(self.url, self.token)
+                    if self.timetable == Timetable:
+                        self.timetable = Timetable(self.url, self.token)
                 elif module == "grades":
-                    self.grades = Grades(self.url, self.token)
+                    if self.grades == Grades:
+                        self.grades = Grades(self.url, self.token)
                 else:
                     raise BakalibError("Bad module name was provided")
         else:
@@ -211,12 +217,7 @@ class Client(object):
         >>> user.info().class_ # <-- due to class being a reserved keyword.
         >>> user.info().school
         '''
-        if self.thread.is_alive():
-            self.thread.join()
-        return self._info()
 
-    @cachetools.cached(cache)
-    def _info(self):
         class Result(NamedTuple):
             version: str
             name: str
@@ -239,10 +240,6 @@ class Client(object):
         )
         return result
 
-    def refresh_cache(self):
-        self.cache.clear()
-        self.thread.start()
-
 
 class Timetable(object):
     '''
@@ -254,8 +251,6 @@ class Timetable(object):
         next_week(): Increments self.date by 7 days and points to self.date_week.
         date_week(date): Obtains all timetable data about the week of the provided date.
     '''
-    cache = cachetools.Cache(30)
-
     def __init__(self, url, token, date=datetime.date.today()):
         super().__init__()
         self.url = url
@@ -293,23 +288,29 @@ class Timetable(object):
         >>>         lesson.name
         >>>         lesson.teacher
         '''
+        global cache
+
         self.date = date if date else self.date
-        if not self.date in [i for item in self.cache for i in item]:
+        date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
+
+        if not (self.url, self.token, "rozvrh", date_str) in cache:
             self.threadpool.shutdown(wait=True)
             self.threadpool = ThreadPoolExecutor(max_workers=8)
+
         self.threadpool.submit(
             self._date_week, self.date - datetime.timedelta(7))
         self.threadpool.submit(
             self._date_week, self.date + datetime.timedelta(7))
         return self._date_week(self.date)
 
-    @cachetools.cached(cache)
     def _date_week(self, date):
+        date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
+
         response = request(
             self.url,
             self.token,
             "rozvrh",
-            "{:04}{:02}{:02}".format(date.year, date.month, date.day)
+            date_str
         )
 
         class Result(NamedTuple):
@@ -376,12 +377,6 @@ class Timetable(object):
         ]
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
-    def refresh_cache(self):
-        self.cache.clear()
-        self.threadpool.shutdown(wait=False)
-        self.threadpool = ThreadPoolExecutor(max_workers=8)
-        self.threadpool.submit(self._date_week, self.date)
-
 
 class Grades(object):
     '''
@@ -395,8 +390,6 @@ class Grades(object):
     Methods:
         grades(): Obtains all grades.
     '''
-    cache = cachetools.Cache(1)
-
     def __init__(self, url, token):
         super().__init__()
         self.url = url
@@ -418,7 +411,6 @@ class Grades(object):
             self.thread.join()
         return self._grades()
 
-    @cachetools.cached(cache)
     def _grades(self):
         response = request(
             self.url,
