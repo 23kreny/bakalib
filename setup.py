@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as readme:
 
 setuptools.setup(
     name="bakalib",
-    version="0.4.0",
+    version="0.4.1",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A library for accessing the module data of Bakaláři school system easily",
@@ -20,8 +20,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    install_requires=[
-        "PySide2",    
+    install_requires=[  
         "lxml",
         "requests",
         "xmltodict",
