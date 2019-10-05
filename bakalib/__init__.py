@@ -70,8 +70,14 @@ class Municipality:
         if not self.data_dir.is_dir():
             self.data_dir.mkdir()
         if self.db_file.is_file():
-            return self.Result(**json.loads(
-                self.db_file.read_text(encoding='utf-8'), encoding='utf-8'))
+            db = json.loads(self.db_file.read_text(encoding='utf-8'), encoding='utf-8')
+            result = self.Result([
+                self.City(name=city["name"], school_count=city["school_count"], schools=[
+                    self.School(id=school["id"], name=school["name"], domain=school["domain"]
+                    ) for school in city["schools"]
+                ]) for city in db["cities"]
+            ])
+            return result
         else:
             return self.build()
 
