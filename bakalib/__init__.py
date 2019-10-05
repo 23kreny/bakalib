@@ -355,7 +355,7 @@ class Timetable:
 
         @dataclasses.dataclass(frozen=True)
         class Lesson:
-            idcode: str
+            id_code: str
             type: str
             abbr: str
             name: str
@@ -460,21 +460,27 @@ class Grades:
             abbr: str
             average_round: str
             average: str
+            recalculation: str
+            points_to_grade: str
+            quarter: str
+            note: str
+            glob_note: str
             grades: list
 
         @dataclasses.dataclass(frozen=True)
         class Grade:
             subject: str
-            maxb: str
+            max_points: str
             grade: str
             gr: str
+            points: str
             date: str
             date_granted: str
             weight: str
             caption: str
+            note: str
             type: str
             description: str
-            note: str
 
         subjects = [
             Subject(
@@ -482,25 +488,27 @@ class Grades:
                 subject["zkratka"],
                 subject["prumer"],
                 subject["numprumer"],
+                subject["prepocet"],
+                subject["bodytoznm"],
+                subject["ctvrt"],
+                subject["pozn"],
+                subject["globpozn"],
                 [
                     Grade(
                         grade.get("pred"),
                         grade.get("maxb"),
                         grade.get("znamka"),
                         grade.get("zn"),
+                        grade.get("bd"),
                         grade.get("datum"),
                         grade.get("udeleno"),
                         grade.get("vaha"),
                         grade.get("caption"),
+                        grade.get("poznamka")
                         grade.get("typ"),
                         grade.get("ozn"),
-                        grade.get("poznamka")
                     ) for grade in subject["znamky"]["znamka"]
                 ]
             ) for subject in response["predmety"]["predmet"]
         ]
         return Result(subjects)
-
-    def refresh_cache(self):
-        self.cache.clear()
-        self.thread.start()
