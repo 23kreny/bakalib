@@ -165,6 +165,9 @@ class Client:
                 raise BakalibError("Token is invalid: Invalid password/perm_token")
         else:
             self.token = token
+
+        self.thread = Thread(target=request, args=(self.url, self.token, "login"))
+        self.thread.start()
             
     def _permanent_token(self, user: str, password: str) -> str:
         '''
@@ -233,6 +236,8 @@ class Client:
         >>> user.info().class_ # <-- due to class being a reserved keyword.
         >>> user.info().school
         '''
+        if self.thread.is_alive():
+            self.thread.join()
 
         @dataclasses.dataclass(frozen=True)
         class Result:
