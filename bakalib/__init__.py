@@ -131,7 +131,8 @@ def request(url: str, token: str, *args) -> dict:
 
 class Client:
     '''
-    Creates an instance with access to basic information of the user.
+    Creates an instance with access to basic information of the user.\n
+    Check for validity runs only
     >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", password="1234abcd")
     >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", perm_token="*login*User12345*pwd*abcdefgh12345678+jklm==*sgn*ANDR")
     >>> user.info()
@@ -139,7 +140,7 @@ class Client:
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
     '''
-    def __init__(self, username: str, password=None, domain=None, perm_token=None):
+    def __init__(self, username: str, password: str=None, domain: str=None, perm_token: str=None, check_validity: bool=True):
         super().__init__()
         self.username = username
         self.domain = domain
@@ -157,10 +158,13 @@ class Client:
         else:
             raise BakalibError("Incorrect arguments")
 
-        if self._is_token_valid(token):
-            self.token = token
+        if check_validity:
+            if self._is_token_valid(token):
+                self.token = token
+            else:
+                raise BakalibError("Token is invalid: Invalid password/perm_token")
         else:
-            raise BakalibError("Token is invalid: Invalid password/perm_token")
+            self.token = token
             
     def _permanent_token(self, user: str, password: str) -> str:
         '''
