@@ -4,9 +4,9 @@ import hashlib
 import json
 import pathlib
 import re
-from typing import NamedTuple
-from threading import Thread
 from concurrent.futures.thread import ThreadPoolExecutor
+import dataclasses
+from threading import Thread
 
 import cachetools
 import requests
@@ -26,7 +26,7 @@ class Municipality:
     '''
     Provides info about all schools that use the Bakaláři system.\n
         >>> m = Municipality()
-        >>> for city in m.cities:
+        >>> for city in m.municipality().cities:
         >>>     print(city.name)
         >>>     for school in city.schools:
         >>>         print(school.name)
@@ -36,46 +36,51 @@ class Municipality:
                      Library comes prepackaged with the database json.
                      Use only when needed.
     '''
-    conf_dir = pathlib.Path(__file__).parent.joinpath("data")
-    db_file = conf_dir.joinpath("municipality.json")
+    data_dir = pathlib.Path(__file__).parent.joinpath("data")
+    db_file = data_dir.joinpath("municipality.json")
 
-    class City(NamedTuple):
+    @dataclasses.dataclass(frozen=True)
+    class Result:
+        cities: list
+
+    @dataclasses.dataclass(frozen=True)
+    class City:
         name: str
         school_count: str
         schools: list
 
-    class School(NamedTuple):
+    @dataclasses.dataclass(frozen=True)
+    class School:
         id: str
         name: str
         domain: str
 
     def __init__(self):
         super().__init__()
-        if not self.conf_dir.is_dir():
-            self.conf_dir.mkdir()
-        if self.db_file.is_file():
-            self.cities = [
-                self.City(
-                    city[0],
-                    city[1],
-                    [
-                        self.School(
-                            school[0],
-                            school[1],
-                            school[2]
-                        ) for school in city[2]
-                    ]
-                ) for city in json.loads(self.db_file.read_text(encoding='utf-8'), encoding='utf-8')
-            ]
-        else:
-            self.cities = self.build()
 
-    def build(self) -> dict:
+        self.thread = Thread(target=self._municipality)
+        self.thread.start()
+
+    def municipality(self):
+        if self.thread.is_alive():
+            self.thread.join()
+        return self._municipality()
+
+    def _municipality(self):
+        if not self.data_dir.is_dir():
+            self.data_dir.mkdir()
+        if self.db_file.is_file():
+            return self.Result(**json.loads(
+                self.db_file.read_text(encoding='utf-8'), encoding='utf-8'))
+        else:
+            return self.build()
+
+    def build(self):
         import lxml.etree as ET
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
 
-        cities = [
+        result = self.Result([
             self.City(
                 municInfo.find("name").text,
                 municInfo.find("schoolCount").text,
@@ -83,15 +88,16 @@ class Municipality:
                     self.School(
                         school.find("id").text,
                         school.find("name").text,
-                        re.sub("((/)?login.aspx(/)?)?", "", re.sub("http(s)?://(www.)?",
-                                                                   "", school.find("schoolUrl").text)).rstrip("/")
+                        re.sub("((/)?login.aspx(/)?)?", "",
+                            re.sub("http(s)?://(www.)?", "",
+                                school.find("schoolUrl").text)).rstrip("/")
                     ) for school in ET.fromstring(requests.get(url + requests.utils.quote(municInfo.find("name").text), stream=True).content, parser=parser).iter("schoolInfo") if school.find("name").text
                 ]
             ) for municInfo in ET.fromstring(requests.get(url, stream=True).content, parser=parser).iter("municipalityInfo") if municInfo.find("name").text
-        ]
+        ])
         self.db_file.write_text(json.dumps(
-            cities, indent=4, sort_keys=True), encoding='utf-8')
-        return cities
+            dataclasses.asdict(result), indent=4, sort_keys=True), encoding='utf-8')
+        return result
 
 
 cache = cachetools.TTLCache(32, 300)
@@ -117,7 +123,7 @@ def request(url: str, token: str, *args) -> dict:
     return response["results"]
 
 
-class Client(object):
+class Client:
     '''
     Creates an instance with access to basic information of the user.
     >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", password="1234abcd")
@@ -218,7 +224,8 @@ class Client(object):
         >>> user.info().school
         '''
 
-        class Result(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Result:
             version: str
             name: str
             type_abbr: str
@@ -241,7 +248,7 @@ class Client(object):
         return result
 
 
-class Timetable(object):
+class Timetable:
     '''
     Obtains information from the "rozvrh" module of Bakaláři.
     >>> timetable = Timetable(url, token)
@@ -313,22 +320,26 @@ class Timetable(object):
             date_str
         )
 
-        class Result(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Result:
             headers: list
             days: list
             cycle_name: str
 
-        class Header(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Header:
             caption: str
             time_begin: str
             time_end: str
 
-        class Day(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Day:
             abbr: str
             date: str
             lessons: list
 
-        class Lesson(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Lesson:
             idcode: str
             type: str
             abbr: str
@@ -378,7 +389,7 @@ class Timetable(object):
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
 
-class Grades(object):
+class Grades:
     '''
     Obtains information from the "znamky" module of Bakaláři.
     >>> grades = Grades(url, token)
@@ -424,17 +435,20 @@ class Grades(object):
             if not isinstance(subject["znamky"]["znamka"], list):
                 response["predmety"]["predmet"][index]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
 
-        class Result(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Result:
             subjects: list
 
-        class Subject(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Subject:
             name: str
             abbr: str
             average_round: str
             average: str
             grades: list
 
-        class Grade(NamedTuple):
+        @dataclasses.dataclass(frozen=True)
+        class Grade:
             subject: str
             maxb: str
             grade: str
