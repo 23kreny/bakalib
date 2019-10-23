@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as readme:
 
 setuptools.setup(
     name="bakalib",
-    version="0.5.7",
+    version="0.5.9",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A library for accessing the module data of Bakaláři school system easily",

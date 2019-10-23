@@ -357,6 +357,7 @@ class Timetable:
         class Lesson:
             id_code: str
             type: str
+            holiday: str
             abbr: str
             name: str
             teacher_abbr: str
@@ -389,6 +390,7 @@ class Timetable:
                 day["datum"],
                 [Lesson(
                     lesson.get("idcode"), lesson.get("typ"),
+                    lesson.get("zkratka"),
                     lesson.get("zkrpr"), lesson.get("pr"),
                     lesson.get("zkruc"), lesson.get("uc"),
                     lesson.get("zkrmist"), lesson.get("mist"),
@@ -504,7 +506,7 @@ class Grades:
                         grade.get("udeleno"),
                         grade.get("vaha"),
                         grade.get("caption"),
-                        grade.get("poznamka")
+                        grade.get("poznamka"),
                         grade.get("typ"),
                         grade.get("ozn"),
                     ) for grade in subject["znamky"]["znamka"]
