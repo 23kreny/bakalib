@@ -360,6 +360,7 @@ class Timetable:
             holiday: str
             abbr: str
             name: str
+            name_alt: str
             teacher_abbr: str
             teacher: str
             room_abbr: str
@@ -390,8 +391,8 @@ class Timetable:
                 day["datum"],
                 [Lesson(
                     lesson.get("idcode"), lesson.get("typ"),
-                    lesson.get("zkratka"),
-                    lesson.get("zkrpr"), lesson.get("pr"),
+                    lesson.get("zkratka"), lesson.get("zkrpr"),
+                    lesson.get("pr"), lesson.get("nazev"),
                     lesson.get("zkruc"), lesson.get("uc"),
                     lesson.get("zkrmist"), lesson.get("mist"),
                     lesson.get("zkrabs"), lesson.get("abs"),
