@@ -188,10 +188,7 @@ class Client:
         super().__init__()
         self.username = username
         self.domain = domain
-        self.url = "https://{}/login.aspx".format(self.domain)
-
-        self.timetable = Timetable
-        self.grades = Grades
+        self.url = f"https://{self.domain}/login.aspx"
 
         if perm_token:
             self.perm_token = perm_token
@@ -309,10 +306,30 @@ class Client:
         return result
 
 
-class Timetable:
+class GenericModule:
+    """
+    Generic module boilerplate, takes either `Client` object or url and token strings.
+    >>> client = Client(username="user123", password="abcdefgh", domain="domain.example.com/bakaweb")
+    >>> module = GenericModule(client=client)
+    >>> module = GenericModule(url="domain.example.com/bakaweb", token="abcdefgh12345678")
+    """
+
+    def __init__(self, client: Client = None, url: str = None, token: str = None):
+        if client:
+            self.url = client.url
+            self.token = client.token
+        elif url and token:
+            self.url = url
+            self.token = token
+        else:
+            raise BakalibError("Invalid arguments provided to module.")
+
+
+class Timetable(GenericModule):
     """
     Obtains information from the "rozvrh" module of Bakaláři.
     >>> timetable = Timetable(url, token)
+    >>> timetable = Timetable(client) # <- You can also use a `Client` instance
     Methods:
         prev_week(): Decrements self.date by 7 days and points to self.date_week.
         this_week(): Points to date_week() with current date.
@@ -320,10 +337,14 @@ class Timetable:
         date_week(date): Obtains all timetable data about the week of the provided date.
     """
 
-    def __init__(self, url, token, date=datetime.date.today()):
-        super().__init__()
-        self.url = url
-        self.token = token
+    def __init__(
+        self,
+        client: Client = None,
+        url: str = None,
+        token: str = None,
+        date: datetime.date = datetime.date.today(),
+    ):
+        super().__init__(client=client, url=url, token=token)
         self.date = date
 
         self.threadpool = ThreadPoolExecutor(max_workers=8)
@@ -369,6 +390,17 @@ class Timetable:
         self.threadpool.submit(self._date_week, self.date - datetime.timedelta(7))
         self.threadpool.submit(self._date_week, self.date + datetime.timedelta(7))
         return self._date_week(self.date)
+
+    def clear_cache(self):
+        """
+        Clears all entries related to the "rozvrh" module from global cache.
+        >>> timetable.clear_cache()
+        """
+        global cache
+
+        for entry in cache:
+            if "rozvrh" in entry:
+                cache.pop(entry)
 
     def _date_week(self, date):
         date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
@@ -459,30 +491,29 @@ class Timetable:
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
 
-class Grades:
+class Grades(GenericModule):
     """
     Obtains information from the "znamky" module of Bakaláři.
     >>> grades = Grades(url, token)
+    >>> grades = Grades(client) # <- You can also use a `Client` instance
     >>> for subject in grades.grades().subjects:
     >>>     for grade in subject.grades:
     >>>         print(grade.subject)
     >>>         print(grade.caption)
     >>>         print(grade.grade)
     Methods:
-        grades(): Obtains all grades.
+        grades(): Retrieves all grades.
     """
 
-    def __init__(self, url, token):
-        super().__init__()
-        self.url = url
-        self.token = token
+    def __init__(self, client: Client = None, url: str = None, token: str = None):
+        super().__init__(client=client, url=url, token=token)
 
         self.thread = Thread(target=self._grades)
         self.thread.start()
 
     def grades(self):
         """
-        Obtains all grades.
+        Retrieves all grades.
         >>> for subject in grades.grades().subjects:
         >>>     subject.name
         >>>     for grade in subject.grades:
@@ -492,6 +523,17 @@ class Grades:
         if self.thread.is_alive():
             self.thread.join()
         return self._grades()
+
+    def clear_cache(self):
+        """
+        Clear all entries related to the "znamky" module from global cache.
+        >>> grades.clear_cache()
+        """
+        global cache
+
+        for entry in cache:
+            if "znamky" in entry:
+                cache.pop(entry)
 
     def _grades(self):
         response = request(self.url, self.token, "znamky")
