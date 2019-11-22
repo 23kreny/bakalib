@@ -23,7 +23,7 @@ class BakalibError(Exception):
 
 
 class Municipality:
-    '''
+    """
     Provides info about all schools that use the Bakaláři system.\n
         >>> m = Municipality()
         >>> for city in m.municipality().cities:
@@ -35,7 +35,8 @@ class Municipality:
             build(): Builds the local database from 'https://sluzby.bakalari.cz/api/v1/municipality'.
                      Library comes prepackaged with the database json.
                      Use only when needed.
-    '''
+    """
+
     data_dir = pathlib.Path(__file__).parent.joinpath("data")
     db_file = data_dir.joinpath("municipality.json")
 
@@ -70,50 +71,85 @@ class Municipality:
         if not self.data_dir.is_dir():
             self.data_dir.mkdir()
         if self.db_file.is_file():
-            db = json.loads(self.db_file.read_text(encoding='utf-8'), encoding='utf-8')
-            result = self.Result([
-                self.City(name=city["name"], school_count=city["school_count"], schools=[
-                    self.School(id=school["id"], name=school["name"], domain=school["domain"]
-                    ) for school in city["schools"]
-                ]) for city in db["cities"]
-            ])
+            db = json.loads(self.db_file.read_text(encoding="utf-8"), encoding="utf-8")
+            result = self.Result(
+                [
+                    self.City(
+                        name=city["name"],
+                        school_count=city["school_count"],
+                        schools=[
+                            self.School(
+                                id=school["id"],
+                                name=school["name"],
+                                domain=school["domain"],
+                            )
+                            for school in city["schools"]
+                        ],
+                    )
+                    for city in db["cities"]
+                ]
+            )
             return result
         else:
             return self.build()
 
     def build(self):
         import lxml.etree as ET
+
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
 
-        result = self.Result([
-            self.City(
-                municInfo.find("name").text,
-                municInfo.find("schoolCount").text,
-                [
-                    self.School(
-                        school.find("id").text,
-                        school.find("name").text,
-                        re.sub("((/)?login.aspx(/)?)?", "",
-                            re.sub("http(s)?://(www.)?", "",
-                                school.find("schoolUrl").text)).rstrip("/")
-                    ) for school in ET.fromstring(requests.get(url + requests.utils.quote(municInfo.find("name").text), stream=True).content, parser=parser).iter("schoolInfo") if school.find("name").text
-                ]
-            ) for municInfo in ET.fromstring(requests.get(url, stream=True).content, parser=parser).iter("municipalityInfo") if municInfo.find("name").text
-        ])
-        self.db_file.write_text(json.dumps(
-            dataclasses.asdict(result), indent=4, sort_keys=True), encoding='utf-8')
+        result = self.Result(
+            [
+                self.City(
+                    municInfo.find("name").text,
+                    municInfo.find("schoolCount").text,
+                    [
+                        self.School(
+                            school.find("id").text,
+                            school.find("name").text,
+                            re.sub(
+                                "((/)?login.aspx(/)?)?",
+                                "",
+                                re.sub(
+                                    "http(s)?://(www.)?",
+                                    "",
+                                    school.find("schoolUrl").text,
+                                ),
+                            ).rstrip("/"),
+                        )
+                        for school in ET.fromstring(
+                            requests.get(
+                                url + requests.utils.quote(municInfo.find("name").text),
+                                stream=True,
+                            ).content,
+                            parser=parser,
+                        ).iter("schoolInfo")
+                        if school.find("name").text
+                    ],
+                )
+                for municInfo in ET.fromstring(
+                    requests.get(url, stream=True).content, parser=parser
+                ).iter("municipalityInfo")
+                if municInfo.find("name").text
+            ]
+        )
+        self.db_file.write_text(
+            json.dumps(dataclasses.asdict(result), indent=4, sort_keys=True),
+            encoding="utf-8",
+        )
         return result
 
 
 cache = cachetools.TTLCache(32, 300)
 
+
 @cachetools.cached(cache)
 def request(url: str, token: str, *args) -> dict:
-    '''
+    """
     Make a GET request to school URL.\n
     Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.
-    '''
+    """
     if not args or len(args) > 2:
         raise BakalibError("Bad arguments")
     params = {"hx": token, "pm": args[0]}
@@ -130,7 +166,7 @@ def request(url: str, token: str, *args) -> dict:
 
 
 class Client:
-    '''
+    """
     Creates an instance with access to basic information of the user.\n
     Check for validity runs only
     >>> user = Client(username="User12345", domain="domain.example.com/bakaweb", password="1234abcd")
@@ -139,8 +175,16 @@ class Client:
     Methods:
         info(): Obtains basic information about the user.
         add_modules(*args): Extends the functionality with another module/s.
-    '''
-    def __init__(self, username: str, password: str=None, domain: str=None, perm_token: str=None, check_validity: bool=True):
+    """
+
+    def __init__(
+        self,
+        username: str,
+        password: str = None,
+        domain: str = None,
+        perm_token: str = None,
+        check_validity: bool = True,
+    ):
         super().__init__()
         self.username = username
         self.domain = domain
@@ -168,11 +212,11 @@ class Client:
 
         self.thread = Thread(target=request, args=(self.url, self.token, "login"))
         self.thread.start()
-            
+
     def _permanent_token(self, user: str, password: str) -> str:
-        '''
+        """
         Generates a permanent access token with securely hashed password.
-        '''
+        """
         r = requests.get(url=self.url, params={"gethx": user}, verify=False)
         xml = xmltodict.parse(r.content)
         if not xml["results"]["res"] == "01":
@@ -181,16 +225,16 @@ class Client:
         ikod = xml["results"]["ikod"]
         typ = xml["results"]["typ"]
         salted_password = (salt + ikod + typ + password).encode("utf-8")
-        hashed_password = base64.b64encode(
-            hashlib.sha512(salted_password).digest())
-        perm_token = "*login*" + user + "*pwd*" + \
-            hashed_password.decode("utf8") + "*sgn*ANDR"
+        hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
+        perm_token = (
+            "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
+        )
         return perm_token
 
     def _token(self, perm_token: str) -> str:
-        '''
+        """
         Generates an access token using current time.
-        '''
+        """
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
         hash = hashlib.sha512((perm_token + datecode).encode("utf-8")).digest()
@@ -198,9 +242,9 @@ class Client:
         return token
 
     def _is_token_valid(self, token: str) -> bool:
-        '''
+        """
         Checks for token validity.
-        '''
+        """
         try:
             request(self.url, token, "login")
             return True
@@ -208,14 +252,14 @@ class Client:
             return False
 
     def add_modules(self, *modules) -> None:
-        '''
+        """
         Extends the functionality of the Client class with another module(s).\n
         Supported modules: timetable, grades\n
         WIP: absence
         >>> user.add_modules("timetable", "grades")
         >>> user.timetable.this_week()
         >>> user.grades.grades()
-        '''
+        """
         if modules:
             for module in modules:
                 if module == "timetable":
@@ -230,12 +274,12 @@ class Client:
             raise BakalibError("No modules were provided")
 
     def info(self):
-        '''
+        """
         Obtains basic information about the user into a NamedTuple.
         >>> user.info().name
         >>> user.info().class_ # <-- due to class being a reserved keyword.
         >>> user.info().school
-        '''
+        """
         if self.thread.is_alive():
             self.thread.join()
 
@@ -255,16 +299,18 @@ class Client:
         response = request(self.url, self.token, "login")
         result = Result(
             *[
-                response.get(element).get(
-                    "newmarkdays") if element == "params" else response.get(element)
-                for element in response if not element == "result"
+                response.get(element).get("newmarkdays")
+                if element == "params"
+                else response.get(element)
+                for element in response
+                if not element == "result"
             ]
         )
         return result
 
 
 class Timetable:
-    '''
+    """
     Obtains information from the "rozvrh" module of Bakaláři.
     >>> timetable = Timetable(url, token)
     Methods:
@@ -272,7 +318,8 @@ class Timetable:
         this_week(): Points to date_week() with current date.
         next_week(): Increments self.date by 7 days and points to self.date_week.
         date_week(date): Obtains all timetable data about the week of the provided date.
-    '''
+    """
+
     def __init__(self, url, token, date=datetime.date.today()):
         super().__init__()
         self.url = url
@@ -299,7 +346,7 @@ class Timetable:
     # ----------------------------------------------------
 
     def date_week(self, date=None):
-        '''
+        """
         Obtains all timetable data about the week of the provided date.
         >>> this_week = timetable.date_week(datetime.date.today())
         >>> for header in this_week.headers:
@@ -309,7 +356,7 @@ class Timetable:
         >>>     for lesson in day.lessons:
         >>>         lesson.name
         >>>         lesson.teacher
-        '''
+        """
         global cache
 
         self.date = date if date else self.date
@@ -319,21 +366,14 @@ class Timetable:
             self.threadpool.shutdown(wait=True)
             self.threadpool = ThreadPoolExecutor(max_workers=8)
 
-        self.threadpool.submit(
-            self._date_week, self.date - datetime.timedelta(7))
-        self.threadpool.submit(
-            self._date_week, self.date + datetime.timedelta(7))
+        self.threadpool.submit(self._date_week, self.date - datetime.timedelta(7))
+        self.threadpool.submit(self._date_week, self.date + datetime.timedelta(7))
         return self._date_week(self.date)
 
     def _date_week(self, date):
         date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
 
-        response = request(
-            self.url,
-            self.token,
-            "rozvrh",
-            date_str
-        )
+        response = request(self.url, self.token, "rozvrh", date_str)
 
         @dataclasses.dataclass(frozen=True)
         class Result:
@@ -379,36 +419,48 @@ class Timetable:
             time_end: str
 
         headers = [
-            Header(
-                header["caption"],
-                header["begintime"],
-                header["endtime"]
-            ) for header in response["rozvrh"]["hodiny"]["hod"]
+            Header(header["caption"], header["begintime"], header["endtime"])
+            for header in response["rozvrh"]["hodiny"]["hod"]
         ]
         days = [
             Day(
                 day["zkratka"],
                 day["datum"],
-                [Lesson(
-                    lesson.get("idcode"), lesson.get("typ"),
-                    lesson.get("zkratka"), lesson.get("zkrpr"),
-                    lesson.get("pr"), lesson.get("nazev"),
-                    lesson.get("zkruc"), lesson.get("uc"),
-                    lesson.get("zkrmist"), lesson.get("mist"),
-                    lesson.get("zkrabs"), lesson.get("abs"),
-                    lesson.get("tema"), lesson.get("zkrskup"),
-                    lesson.get("skup"), lesson.get("cycle"),
-                    lesson.get("uvol"), lesson.get("chng"),
-                    lesson.get("notice"), header.caption,
-                    header.time_begin, header.time_end
-                ) for header, lesson in zip(headers, day["hodiny"]["hod"])]
-            ) for day in response["rozvrh"]["dny"]["den"]
+                [
+                    Lesson(
+                        lesson.get("idcode"),
+                        lesson.get("typ"),
+                        lesson.get("zkratka"),
+                        lesson.get("zkrpr"),
+                        lesson.get("pr"),
+                        lesson.get("nazev"),
+                        lesson.get("zkruc"),
+                        lesson.get("uc"),
+                        lesson.get("zkrmist"),
+                        lesson.get("mist"),
+                        lesson.get("zkrabs"),
+                        lesson.get("abs"),
+                        lesson.get("tema"),
+                        lesson.get("zkrskup"),
+                        lesson.get("skup"),
+                        lesson.get("cycle"),
+                        lesson.get("uvol"),
+                        lesson.get("chng"),
+                        lesson.get("notice"),
+                        header.caption,
+                        header.time_begin,
+                        header.time_end,
+                    )
+                    for header, lesson in zip(headers, day["hodiny"]["hod"])
+                ],
+            )
+            for day in response["rozvrh"]["dny"]["den"]
         ]
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
 
 class Grades:
-    '''
+    """
     Obtains information from the "znamky" module of Bakaláři.
     >>> grades = Grades(url, token)
     >>> for subject in grades.grades().subjects:
@@ -418,7 +470,8 @@ class Grades:
     >>>         print(grade.grade)
     Methods:
         grades(): Obtains all grades.
-    '''
+    """
+
     def __init__(self, url, token):
         super().__init__()
         self.url = url
@@ -428,30 +481,28 @@ class Grades:
         self.thread.start()
 
     def grades(self):
-        '''
+        """
         Obtains all grades.
         >>> for subject in grades.grades().subjects:
         >>>     subject.name
         >>>     for grade in subject.grades:
         >>>         grade.caption
         >>>         grade.grade
-        '''
+        """
         if self.thread.is_alive():
             self.thread.join()
         return self._grades()
 
     def _grades(self):
-        response = request(
-            self.url,
-            self.token,
-            "znamky"
-        )
+        response = request(self.url, self.token, "znamky")
         if response["predmety"] is None:
             raise BakalibError("Grades module returned None, no grades were found.")
 
         for index, subject in enumerate(response["predmety"]["predmet"]):
             if not isinstance(subject["znamky"]["znamka"], list):
-                response["predmety"]["predmet"][index]["znamky"]["znamka"] = [subject["znamky"]["znamka"]]
+                response["predmety"]["predmet"][index]["znamky"]["znamka"] = [
+                    subject["znamky"]["znamka"]
+                ]
 
         @dataclasses.dataclass(frozen=True)
         class Result:
@@ -510,8 +561,10 @@ class Grades:
                         grade.get("poznamka"),
                         grade.get("typ"),
                         grade.get("ozn"),
-                    ) for grade in subject["znamky"]["znamka"]
-                ]
-            ) for subject in response["predmety"]["predmet"]
+                    )
+                    for grade in subject["znamky"]["znamka"]
+                ],
+            )
+            for subject in response["predmety"]["predmet"]
         ]
         return Result(subjects)
