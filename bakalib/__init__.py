@@ -260,17 +260,15 @@ class Client:
         if modules:
             for module in modules:
                 if module == "timetable":
-                    if self.timetable == Timetable:
-                        self.timetable = Timetable(self.url, self.token)
+                    self.timetable = Timetable(self)
                 elif module == "grades":
-                    if self.grades == Grades:
-                        self.grades = Grades(self.url, self.token)
+                    self.grades = Grades(self)
                 else:
                     raise BakalibError("Bad module name was provided")
         else:
             raise BakalibError("No modules were provided")
 
-    def info(self):
+    def info(self) -> "Client.info.Result":
         """
         Obtains basic information about the user into a NamedTuple.
         >>> user.info().name
@@ -314,7 +312,9 @@ class GenericModule:
     >>> module = GenericModule(url="domain.example.com/bakaweb", token="abcdefgh12345678")
     """
 
-    def __init__(self, client: Client = None, url: str = None, token: str = None):
+    def __init__(
+        self, client: Client = None, url: str = None, token: str = None
+    ) -> None:
         if client:
             self.url = client.url
             self.token = client.token
@@ -331,10 +331,10 @@ class Timetable(GenericModule):
     >>> timetable = Timetable(url, token)
     >>> timetable = Timetable(client) # <- You can also use a `Client` instance
     Methods:
-        prev_week(): Decrements self.date by 7 days and points to self.date_week.
-        this_week(): Points to date_week() with current date.
-        next_week(): Increments self.date by 7 days and points to self.date_week.
-        date_week(date): Obtains all timetable data about the week of the provided date.
+        prev_week(prune: bool): Decrements self.date by 7 days and points to self.date_week.
+        this_week(prune: bool): Points to date_week() with current date.
+        next_week(prune: bool): Increments self.date by 7 days and points to self.date_week.
+        date_week(date: datetime.date, prune: bool): Obtains timetable data about the week of the provided date.
     """
 
     def __init__(
@@ -352,24 +352,26 @@ class Timetable(GenericModule):
 
     # ----------------------------------------------------
 
-    def prev_week(self):
+    def prev_week(self, prune: bool = True) -> "Timetable._date_week.Result":
         self.date = self.date - datetime.timedelta(7)
-        return self.date_week(self.date)
+        return self.date_week(self.date, prune=prune)
 
-    def this_week(self):
+    def this_week(self, prune: bool = True) -> "Timetable._date_week.Result":
         self.date = datetime.date.today()
-        return self.date_week(self.date)
+        return self.date_week(self.date, prune=prune)
 
-    def next_week(self):
+    def next_week(self, prune: bool = True) -> "Timetable._date_week.Result":
         self.date = self.date + datetime.timedelta(7)
-        return self.date_week(self.date)
+        return self.date_week(self.date, prune=prune)
 
     # ----------------------------------------------------
-
-    def date_week(self, date=None):
+    def date_week(
+        self, date: datetime.date = None, prune: bool = True
+    ) -> "Timetable._date_week.Result":
         """
         Obtains all timetable data about the week of the provided date.
         >>> this_week = timetable.date_week(datetime.date.today())
+        >>> this_week = timetable.date_week(datetime.date.today(), prune=False) # <- Use this if you want to preserve empty lessons.
         >>> for header in this_week.headers:
         >>>     header.caption
         >>> for day in this_week.days:
@@ -381,7 +383,9 @@ class Timetable(GenericModule):
         global cache
 
         self.date = date if date else self.date
-        date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
+        date_str = "{:04}{:02}{:02}".format(
+            self.date.year, self.date.month, self.date.day
+        )
 
         if not (self.url, self.token, "rozvrh", date_str) in cache:
             self.threadpool.shutdown(wait=True)
@@ -389,9 +393,9 @@ class Timetable(GenericModule):
 
         self.threadpool.submit(self._date_week, self.date - datetime.timedelta(7))
         self.threadpool.submit(self._date_week, self.date + datetime.timedelta(7))
-        return self._date_week(self.date)
+        return self._date_week(self.date, prune=prune)
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """
         Clears all entries related to the "rozvrh" module from global cache.
         >>> timetable.clear_cache()
@@ -402,7 +406,9 @@ class Timetable(GenericModule):
             if "rozvrh" in entry:
                 cache.pop(entry)
 
-    def _date_week(self, date):
+    def _date_week(
+        self, date: datetime.date, prune: bool = True
+    ) -> "Timetable._date_week.Result":
         date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
 
         response = request(self.url, self.token, "rozvrh", date_str)
@@ -412,6 +418,9 @@ class Timetable(GenericModule):
             headers: list
             days: list
             cycle_name: str
+
+            def __len__(self):
+                return len(days)
 
         @dataclasses.dataclass(frozen=True)
         class Header:
@@ -424,6 +433,9 @@ class Timetable(GenericModule):
             abbr: str
             date: str
             lessons: list
+
+            def __len__(self):
+                return len(self.lessons)
 
         @dataclasses.dataclass(frozen=True)
         class Lesson:
@@ -488,6 +500,43 @@ class Timetable(GenericModule):
             )
             for day in response["rozvrh"]["dny"]["den"]
         ]
+
+        if prune:
+            lengths = []
+            placeholder_lesson = None
+            for day in days:
+                for lesson in day.lessons:
+                    if (
+                        lesson.type == "X"
+                        and not lesson.holiday
+                        and not lesson.name_alt
+                        and not lesson.change_description
+                    ):
+                        day.lessons.pop(0)
+                    else:
+                        break
+                for lesson in reversed(day.lessons):
+                    if (
+                        lesson.type == "X"
+                        and not lesson.holiday
+                        and not lesson.name_alt
+                        and not lesson.change_description
+                    ):
+                        day.lessons.pop()
+                        placeholder_lesson = lesson
+                    else:
+                        break
+                lengths.append(len(day))
+
+            for day in days:
+                while len(day.lessons) < max(lengths):
+                    day.lessons.append(placeholder_lesson)
+
+            headers = [
+                Header(lesson.caption, lesson.time_begin, lesson.time_end)
+                for lesson in max(days, key=len).lessons
+            ]
+
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
 
@@ -511,7 +560,7 @@ class Grades(GenericModule):
         self.thread = Thread(target=self._grades)
         self.thread.start()
 
-    def grades(self):
+    def grades(self) -> "Grades._grades.Result":
         """
         Retrieves all grades.
         >>> for subject in grades.grades().subjects:
@@ -524,7 +573,7 @@ class Grades(GenericModule):
             self.thread.join()
         return self._grades()
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """
         Clear all entries related to the "znamky" module from global cache.
         >>> grades.clear_cache()
@@ -535,7 +584,7 @@ class Grades(GenericModule):
             if "znamky" in entry:
                 cache.pop(entry)
 
-    def _grades(self):
+    def _grades(self) -> "Grades._grades.Result":
         response = request(self.url, self.token, "znamky")
         if response["predmety"] is None:
             raise BakalibError("Grades module returned None, no grades were found.")

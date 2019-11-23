@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as readme:
 
 setuptools.setup(
     name="bakalib",
-    version="0.6.0",
+    version="0.6.1",
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A library for accessing the module data of Bakaláři school system easily",
@@ -19,11 +19,6 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
-    install_requires=[  
-        "lxml",
-        "requests",
-        "xmltodict",
-        "cachetools"
-    ]
+    python_requires=">=3.6",
+    install_requires=["lxml", "requests", "xmltodict", "cachetools"],
 )
