@@ -1,11 +1,11 @@
 import base64
+import dataclasses
 import datetime
 import hashlib
 import json
 import pathlib
 import re
 from concurrent.futures.thread import ThreadPoolExecutor
-import dataclasses
 from threading import Thread
 
 import cachetools
@@ -444,7 +444,6 @@ class Timetable(GenericModule):
             holiday: str
             abbr: str
             name: str
-            name_alt: str
             teacher_abbr: str
             teacher: str
             room_abbr: str
@@ -462,6 +461,18 @@ class Timetable(GenericModule):
             time_begin: str
             time_end: str
 
+        def holiday_check(obj: dict):
+            zkratka = obj.get("zkratka")
+            nazev = obj.get("nazev")
+            if not zkratka:
+                return nazev
+            elif not nazev:
+                return zkratka
+            elif zkratka and nazev:
+                return max([obj.get("zkratka"), obj.get("nazev")], key=len)
+            else:
+                return None
+
         headers = [
             Header(header["caption"], header["begintime"], header["endtime"])
             for header in response["rozvrh"]["hodiny"]["hod"]
@@ -474,10 +485,9 @@ class Timetable(GenericModule):
                     Lesson(
                         lesson.get("idcode"),
                         lesson.get("typ"),
-                        lesson.get("zkratka"),
+                        holiday_check(lesson),
                         lesson.get("zkrpr"),
                         lesson.get("pr"),
-                        lesson.get("nazev"),
                         lesson.get("zkruc"),
                         lesson.get("uc"),
                         lesson.get("zkrmist"),
@@ -507,9 +517,8 @@ class Timetable(GenericModule):
             for day in days:
                 for lesson in day.lessons:
                     if (
-                        lesson.type == "X"
+                        (lesson.type == "X" or lesson.type == "A")
                         and not lesson.holiday
-                        and not lesson.name_alt
                         and not lesson.change_description
                     ):
                         day.lessons.pop(0)
@@ -517,9 +526,8 @@ class Timetable(GenericModule):
                         break
                 for lesson in reversed(day.lessons):
                     if (
-                        lesson.type == "X"
+                        (lesson.type == "X" or lesson.type == "A")
                         and not lesson.holiday
-                        and not lesson.name_alt
                         and not lesson.change_description
                     ):
                         day.lessons.pop()
@@ -528,14 +536,24 @@ class Timetable(GenericModule):
                         break
                 lengths.append(len(day))
 
-            for day in days:
-                while len(day.lessons) < max(lengths):
-                    day.lessons.append(placeholder_lesson)
+            longest_day = None
+            for day in sorted(days, key=len, reverse=True):
+                if day.lessons[-1].type != "A" and day.lessons[-1].type != "X":
+                    longest_day = day
+                    break
+            else:
+                longest_day = max(days, key=len)
 
             headers = [
                 Header(lesson.caption, lesson.time_begin, lesson.time_end)
-                for lesson in max(days, key=len).lessons
+                for lesson in (
+                    longest_day.lessons if longest_day else max(days, key=len)
+                )
             ]
+
+            for day in days:
+                while len(day.lessons) < max(lengths):
+                    day.lessons.append(placeholder_lesson)
 
         return Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
