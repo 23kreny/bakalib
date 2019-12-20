@@ -1,1 +1,1 @@
-include bakalib/data/municipality.json
+recursive-include bakalib/data *.json
