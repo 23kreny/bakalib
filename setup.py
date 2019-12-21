@@ -1,6 +1,6 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-from bakalib._version import version
+from bakalib import version
 
 with open("README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
