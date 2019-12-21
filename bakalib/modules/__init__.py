@@ -8,7 +8,7 @@ contents:
     timetable
 
 """
-from .generic import Generic as _Generic
+from ._generic import Generic as _Generic
 from .grades import Grades
 from .timetable import Timetable
 

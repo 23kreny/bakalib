@@ -10,7 +10,7 @@ import html
 from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from .generic import Generic
+from ._generic import Generic
 from ..core.client import Client
 from ..utils import cache, request
 
@@ -29,11 +29,11 @@ class Timetable(Generic):
     """
 
     def __init__(
-            self,
-            client: Client = None,
-            url: str = None,
-            token: str = None,
-            date: datetime.date = datetime.date.today(),
+        self,
+        client: Client = None,
+        url: str = None,
+        token: str = None,
+        date: datetime.date = datetime.date.today(),
     ):
         super().__init__(client=client, url=url, token=token)
         self.date = date
@@ -58,7 +58,7 @@ class Timetable(Generic):
     # ----------------------------------------------------
 
     def date_week(
-            self, date: datetime.date = None, prune: bool = True
+        self, date: datetime.date = None, prune: bool = True
     ) -> "Timetable._date_week.Result":
         """
         Obtains all timetable data about the week of the provided date.
@@ -86,7 +86,7 @@ class Timetable(Generic):
         return self._date_week(self.date, prune=prune)
 
     def _date_week(
-            self, date: datetime.date, prune: bool = True
+        self, date: datetime.date, prune: bool = True
     ) -> "Timetable._date_week.Result":
         date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
 
@@ -198,18 +198,18 @@ class Timetable(Generic):
             for day in days:
                 for lesson in day.lessons:
                     if (
-                            (lesson.type == "X" or lesson.type == "A")
-                            and not lesson.holiday
-                            and not lesson.change_description
+                        (lesson.type == "X" or lesson.type == "A")
+                        and not lesson.holiday
+                        and not lesson.change_description
                     ):
                         day.lessons.pop(0)
                     else:
                         break
                 for lesson in reversed(day.lessons):
                     if (
-                            (lesson.type == "X" or lesson.type == "A")
-                            and not lesson.holiday
-                            and not lesson.change_description
+                        (lesson.type == "X" or lesson.type == "A")
+                        and not lesson.holiday
+                        and not lesson.change_description
                     ):
                         day.lessons.pop()
                         placeholder_lesson = lesson

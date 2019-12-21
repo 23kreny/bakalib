@@ -157,7 +157,7 @@ class Client:
         if self.thread.is_alive():
             self.thread.join()
 
-        @_dataclass(frozen=True)
+        @dataclass(frozen=True)
         class Result:
             version: str
             name: str

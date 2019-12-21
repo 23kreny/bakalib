@@ -8,7 +8,7 @@ __all__ = ("Grades",)
 from dataclasses import dataclass
 from threading import Thread
 
-from .generic import Generic
+from ._generic import Generic
 from ..core.client import Client
 from ..utils import BakalibError, cache, request
 
