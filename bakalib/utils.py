@@ -10,20 +10,20 @@ __all__ = (
     "BakalibError",
 )
 
-import pathlib
+import pathlib as _pathlib
 
-import cachetools
-import requests
-import urllib3
-import xmltodict
+import cachetools as _cachetools
+import requests as _requests
+import urllib3 as _urllib3
+import xmltodict as _xmltodict
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+_urllib3.disable_warnings(_urllib3.exceptions.InsecureRequestWarning)
 
-cache = cachetools.TTLCache(32, 300)
-data_dir = pathlib.Path(__file__).parent.joinpath("data")
+cache = _cachetools.TTLCache(32, 300)
+data_dir = _pathlib.Path(__file__).parent.joinpath("data")
 
 
-@cachetools.cached(cache)
+@_cachetools.cached(cache)
 def request(url: str, **kwargs) -> dict:
     """
     Make a GET request to school URL.\n
@@ -35,8 +35,8 @@ def request(url: str, **kwargs) -> dict:
     if not kwargs or len(kwargs) > 3:
         raise BakalibError("Bad arguments")
 
-    r = requests.get(url=url, params=kwargs, verify=False)
-    response = xmltodict.parse(r.content)
+    r = _requests.get(url=url, params=kwargs, verify=False)
+    response = _xmltodict.parse(r.content)
     results = response.get("results")
 
     try:
