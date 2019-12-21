@@ -37,10 +37,14 @@ def request(url: str, **kwargs) -> dict:
 
     r = requests.get(url=url, params=kwargs, verify=False)
     response = xmltodict.parse(r.content)
-
     results = response.get("results")
-    res = results.get("res")
-    result = results.get("result")
+
+    try:
+        res = results.get("res")
+        result = results.get("result")
+    except AttributeError as e:
+        pass
+
     comp = res if res else result
 
     if not comp == "01":

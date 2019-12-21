@@ -29,4 +29,4 @@ class Generic:
             self.url = url
             self.token = token
         else:
-            raise BakalibError("Invalid arguments provided to module.")
+            raise BakalibError("Invalid module arguments.")

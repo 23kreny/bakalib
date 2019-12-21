@@ -1,4 +1,4 @@
 {
   "python.formatting.provider": "black",
-  "python.pythonPath": "/home/kreny/.pyenv/py3.7_baka/bin/python"
+  "python.pythonPath": "/usr/bin/python"
 }

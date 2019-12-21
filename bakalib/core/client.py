@@ -1,6 +1,10 @@
 """
-client
-======
+client module
+
+contains:
+
+    Client: class
+
 """
 
 __all__ = ("Client",)
@@ -11,7 +15,8 @@ import hashlib
 from dataclasses import dataclass
 from threading import Thread
 
-from ..utils import BakalibError, request
+from ..utils import BakalibError
+from ..utils import request
 
 
 def _is_logged_in_decorator(invert: bool = False):
@@ -73,7 +78,9 @@ class Client:
         self.logged_in = False
 
     @_is_logged_in_decorator(invert=True)
-    def login(self, password: str = None, perm_token: str = None, check_valid: bool = True):
+    def login(
+        self, password: str = None, perm_token: str = None, check_valid: bool = True
+    ):
         if perm_token:
             self.perm_token = perm_token
             token = self._token(self.perm_token)
@@ -114,7 +121,7 @@ class Client:
         salted_password = (salt + ikod + typ + password).encode("utf-8")
         hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
         perm_token = (
-                "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
+            "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
         )
         return perm_token
 
@@ -150,7 +157,7 @@ class Client:
         if self.thread.is_alive():
             self.thread.join()
 
-        @dataclass(frozen=True)
+        @_dataclass(frozen=True)
         class Result:
             version: str
             name: str
