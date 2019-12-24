@@ -8,9 +8,9 @@ __all__ = ("Grades",)
 from dataclasses import dataclass
 from threading import Thread
 
-from ._generic import Generic
 from ..core.client import Client
-from ..utils import BakalibError, cache, request
+from ..utils import BakalibError, _setup_logger, cache, request
+from ._generic import Generic
 
 
 class Grades(Generic):
@@ -30,9 +30,11 @@ class Grades(Generic):
 
     def __init__(self, client: Client = None, url: str = None, token: str = None):
         super().__init__(client=client, url=url, token=token)
+        self.logger = _setup_logger(f"grades_{client.username}")
 
         self.thread = Thread(target=self._grades)
         self.thread.start()
+        self.logger.info(f"GRADES THREAD STARTED")
 
     def grades(self) -> "Grades._grades.Result":
         """
@@ -44,7 +46,9 @@ class Grades(Generic):
         >>>         grade.grade
         """
         if self.thread.is_alive():
+            self.logger.info("GRADES THREAD RUNNING")
             self.thread.join()
+            self.logger.info("GRADES THREAD FINISHED")
         return self._grades()
 
     def _grades(self) -> "Grades._grades.Result":

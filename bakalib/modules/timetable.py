@@ -10,9 +10,9 @@ import html
 from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from ._generic import Generic
 from ..core.client import Client
-from ..utils import cache, request
+from ..utils import _setup_logger, cache, request
+from ._generic import Generic
 
 
 class Timetable(Generic):
@@ -37,9 +37,12 @@ class Timetable(Generic):
     ):
         super().__init__(client=client, url=url, token=token)
         self.date = date
+        self.logger = _setup_logger(f"timetable_{client.username}")
 
         self.threadpool = ThreadPoolExecutor(max_workers=8)
+        self.logger.info("TIMETABLE THREADPOOL CREATED")
         self.threadpool.submit(self._date_week, self.date)
+        self.logger.info("TASK SUBMITTED")
 
     # ----------------------------------------------------
 
@@ -79,10 +82,14 @@ class Timetable(Generic):
 
         if not (self.url, self.token, "rozvrh", date_str) in cache:
             self.threadpool.shutdown(wait=True)
+            self.logger.info("STOPPED, CREATING NEW THREADPOOL")
             self.threadpool = ThreadPoolExecutor(max_workers=8)
+            self.logger.info("NEW THREADPOOL CREATED")
 
         self.threadpool.submit(self._date_week, self.date - datetime.timedelta(7))
         self.threadpool.submit(self._date_week, self.date + datetime.timedelta(7))
+        self.logger.info("NEW TASKS SUBMITTED")
+
         return self._date_week(self.date, prune=prune)
 
     def _date_week(

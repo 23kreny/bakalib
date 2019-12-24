@@ -12,7 +12,7 @@ from threading import Thread
 
 import requests
 
-from ..utils import data_dir
+from ..utils import BakalibError, _setup_logger, data_dir
 
 
 class Municipality:
@@ -55,12 +55,17 @@ class Municipality:
         domain: str
 
     def __init__(self):
+        self.logger = _setup_logger("municipality")
+
         self.thread = Thread(target=self._municipality)
         self.thread.start()
+        self.logger.info("MUNICIPALITY THREAD STARTED")
 
     def municipality(self):
         if self.thread.is_alive():
+            self.logger.info("MUNICIPALITY THREAD RUNNING")
             self.thread.join()
+            self.logger.info("MUNICIPALITY THREAD FINISHED")
         return self._municipality()
 
     def _municipality(self):
@@ -95,41 +100,47 @@ class Municipality:
         url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
 
-        result = self.Result(
-            [
-                self.City(
-                    municInfo.find("name").text,
-                    municInfo.find("schoolCount").text,
-                    [
-                        self.School(
-                            school.find("id").text,
-                            school.find("name").text,
-                            re.sub(
-                                "((/)?login.aspx(/)?)?",
-                                "",
+        try:
+            result = self.Result(
+                [
+                    self.City(
+                        municInfo.find("name").text,
+                        municInfo.find("schoolCount").text,
+                        [
+                            self.School(
+                                school.find("id").text,
+                                school.find("name").text,
                                 re.sub(
-                                    "http(s)?://(www.)?",
+                                    "((/)?login.aspx(/)?)?",
                                     "",
-                                    school.find("schoolUrl").text,
-                                ),
-                            ).rstrip("/"),
-                        )
-                        for school in ET.fromstring(
-                        requests.get(
-                            url + requests.utils.quote(municInfo.find("name").text),
-                            stream=True,
-                        ).content,
-                        parser=parser,
-                    ).iter("schoolInfo")
-                        if school.find("name").text
-                    ],
-                )
-                for municInfo in ET.fromstring(
-                requests.get(url, stream=True).content, parser=parser
-            ).iter("municipalityInfo")
-                if municInfo.find("name").text
-            ]
-        )
+                                    re.sub(
+                                        "http(s)?://(www.)?",
+                                        "",
+                                        school.find("schoolUrl").text,
+                                    ),
+                                ).rstrip("/"),
+                            )
+                            for school in ET.fromstring(
+                                requests.get(
+                                    url
+                                    + requests.utils.quote(municInfo.find("name").text),
+                                    stream=True,
+                                ).content,
+                                parser=parser,
+                            ).iter("schoolInfo")
+                            if school.find("name").text
+                        ],
+                    )
+                    for municInfo in ET.fromstring(
+                        requests.get(url, stream=True).content, parser=parser
+                    ).iter("municipalityInfo")
+                    if municInfo.find("name").text
+                ]
+            )
+        except Exception as e:
+            self.logger.error(f"{type(e)}: {e}")
+            raise BakalibError("Municipality failed to generate")
+
         self.db_file.write_text(
             json.dumps(dataclasses.asdict(result), indent=4, sort_keys=True),
             encoding="utf-8",

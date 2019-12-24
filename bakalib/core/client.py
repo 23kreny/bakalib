@@ -15,8 +15,7 @@ import hashlib
 from dataclasses import dataclass
 from threading import Thread
 
-from ..utils import BakalibError
-from ..utils import request
+from ..utils import BakalibError, _setup_logger, request
 
 
 def _is_logged_in_decorator(invert: bool = False):
@@ -74,8 +73,14 @@ class Client:
         self.perm_token = None
         self.token = None
         self.thread = Thread()
+        self.logger = _setup_logger(f"client_{self.username}")
 
         self.logged_in = False
+
+        self.logger.info(f"CLIENT CREATED")
+
+    def __str__(self):
+        return f"Client(username={self.username}, domain={self.domain})"
 
     @_is_logged_in_decorator(invert=True)
     def login(
@@ -102,13 +107,16 @@ class Client:
             target=request, args=(self.url,), kwargs={"hx": self.token, "pm": "login"}
         )
         self.thread.start()
+        self.logger.info(f"INFO THREAD STARTED")
 
         self.logged_in = True
+        self.logger.info(f"LOGGED IN SUCCESSFULLY")
 
     def _permanent_token(self, user: str, password: str) -> str:
         """
         Generates a permanent access token with securely hashed password.
         """
+        self.logger.debug("GENERATING PERM_TOKEN")
         try:
             res = request(url=self.url, gethx=user)
         except BakalibError as e:
@@ -123,17 +131,19 @@ class Client:
         perm_token = (
             "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
         )
+        self.logger.debug("PERM_TOKEN GENERATED")
         return perm_token
 
-    @staticmethod
-    def _token(perm_token: str) -> str:
+    def _token(self, perm_token: str) -> str:
         """
         Generates an access token using current time.
         """
+        self.logger.debug("GENERATING ACCESS TOKEN")
         today = datetime.date.today()
         datecode = "{:04}{:02}{:02}".format(today.year, today.month, today.day)
         token_hash = hashlib.sha512((perm_token + datecode).encode("utf-8")).digest()
         token = base64.urlsafe_b64encode(token_hash).decode("utf-8")
+        self.logger.debug("ACCESS TOKEN GENERATED")
         return token
 
     def _is_token_valid(self, token: str) -> bool:
@@ -142,8 +152,10 @@ class Client:
         """
         try:
             request(url=self.url, hx=token, pm="login")
+            self.logger.info(f"TOKEN IS VALID")
             return True
         except BakalibError:
+            self.logger.warning(f"TOKEN IS INVALID")
             return False
 
     @_is_logged_in_decorator()
@@ -155,7 +167,9 @@ class Client:
         >>> user.info().school
         """
         if self.thread.is_alive():
+            self.logger.info(f"INFO THREAD RUNNING")
             self.thread.join()
+            self.logger.info(f"INFO THREAD FINISHED")
 
         @dataclass(frozen=True)
         class Result:

@@ -4,13 +4,18 @@ util
 """
 
 __all__ = (
+    "BakalibError",
     "cache",
     "data_dir",
+    "logger",
     "request",
-    "BakalibError",
 )
 
+import inspect as _inspect
+import logging as _logging
 import pathlib as _pathlib
+import sys as _sys
+import datetime as _datetime
 
 import cachetools as _cachetools
 import requests as _requests
@@ -19,8 +24,39 @@ import xmltodict as _xmltodict
 
 _urllib3.disable_warnings(_urllib3.exceptions.InsecureRequestWarning)
 
-cache = _cachetools.TTLCache(32, 300)
 data_dir = _pathlib.Path(__file__).parent.joinpath("data")
+_log_dir = _pathlib.Path(_pathlib.Path.home() / ".bakalib")
+_log_file = _pathlib.Path(
+    _log_dir / (_datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".log")
+)
+
+if not _log_dir.is_dir():
+    _log_dir.mkdir()
+else:
+    _logs = [f for f in _log_dir.iterdir()]
+    _logs.sort()
+    while len(_logs) > 5:
+        _logs[0].unlink()
+        _logs.pop(0)
+
+_log_file.touch()
+
+
+def _setup_logger(name):
+    formatter = _logging.Formatter(
+        fmt="%(asctime)s — %(name)s — %(levelname)s — %(message)s — %(funcName)s:%(lineno)d"
+    )
+    handler = _logging.FileHandler(_log_file, mode="a")
+    handler.setFormatter(formatter)
+    logger = _logging.getLogger(name)
+    logger.setLevel(_logging.DEBUG)
+    logger.addHandler(handler)
+    return logger
+
+
+logger = _setup_logger("default")
+
+cache = _cachetools.TTLCache(32, 300)
 
 
 @_cachetools.cached(cache)
@@ -32,8 +68,6 @@ def request(url: str, **kwargs) -> dict:
     >>> request("https://example.com/login.aspx", gethx="Username123")
     >>> request("https://example.com/login.aspx", hx="token1234=", pm="module_name", pmd="20191219") # pmd is optional
     """
-    if not kwargs or len(kwargs) > 3:
-        raise BakalibError("Bad arguments")
 
     r = _requests.get(url=url, params=kwargs, verify=False)
     response = _xmltodict.parse(r.content)
@@ -43,7 +77,9 @@ def request(url: str, **kwargs) -> dict:
         res = results.get("res")
         result = results.get("result")
     except AttributeError as e:
-        pass
+        log_args = dict(kwargs)
+        log_args.pop(k="hx", d=None)
+        logger.error(log_args)
 
     comp = res if res else result
 
