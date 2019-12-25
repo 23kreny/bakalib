@@ -120,7 +120,7 @@ class Client:
         try:
             res = request(url=self.url, gethx=user)
         except BakalibError as e:
-            print(e)
+            self.logger.warning("PERM_TOKEN IS INVALID")
             raise BakalibError("Invalid username")
 
         salt = res.get("salt")

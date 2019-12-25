@@ -10,6 +10,7 @@ import json
 import re
 from threading import Thread
 
+import grequests
 import requests
 
 from ..utils import BakalibError, _setup_logger, data_dir
@@ -96,16 +97,43 @@ class Municipality:
 
     def build(self):
         import lxml.etree as ET
+        from time import time
 
-        url = "https://sluzby.bakalari.cz/api/v1/municipality/"
+        municipality_url = "https://sluzby.bakalari.cz/api/v1/municipality/"
         parser = ET.XMLParser(recover=True)
 
         try:
+            s = time()
+            municInfo = ET.fromstring(
+                requests.get(municipality_url, stream=True).content, parser=parser
+            ).iter("municipalityInfo")
+            municInfo = [mInfo for mInfo in municInfo if mInfo.find("name").text]
+
+            self.logger.debug(f"CITY LIST REQUEST TOOK {time()-s}")
+
+            cities_urls = [
+                municipality_url + requests.utils.quote(city.find("name").text)
+                for city in municInfo
+                if city.find("name").text
+            ]
+
+            rs = (grequests.get(url) for url in cities_urls)
+
+            s = time()
+            cities_responses = grequests.map(rs)
+
+            self.logger.debug(f"ALL CITIES REQUESTS TOOK {time()-s}")
+
+            cities = [
+                ET.fromstring(resp.content, parser=parser).iter("schoolInfo")
+                for resp in cities_responses
+            ]
+
             result = self.Result(
                 [
                     self.City(
-                        municInfo.find("name").text,
-                        municInfo.find("schoolCount").text,
+                        mInfo.find("name").text,
+                        mInfo.find("schoolCount").text,
                         [
                             self.School(
                                 school.find("id").text,
@@ -120,23 +148,15 @@ class Municipality:
                                     ),
                                 ).rstrip("/"),
                             )
-                            for school in ET.fromstring(
-                                requests.get(
-                                    url
-                                    + requests.utils.quote(municInfo.find("name").text),
-                                    stream=True,
-                                ).content,
-                                parser=parser,
-                            ).iter("schoolInfo")
+                            for school in city
                             if school.find("name").text
                         ],
                     )
-                    for municInfo in ET.fromstring(
-                        requests.get(url, stream=True).content, parser=parser
-                    ).iter("municipalityInfo")
-                    if municInfo.find("name").text
+                    for mInfo, city in zip(municInfo, cities)
                 ]
             )
+            self.logger.info("GENERATED SUCCESSFULLY")
+
         except Exception as e:
             self.logger.error(f"{type(e)}: {e}")
             raise BakalibError("Municipality failed to generate")

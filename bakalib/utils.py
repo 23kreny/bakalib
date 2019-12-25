@@ -7,20 +7,25 @@ __all__ = (
     "BakalibError",
     "cache",
     "data_dir",
-    "logger",
+    "_logger",
     "request",
 )
 
+import datetime as _datetime
 import inspect as _inspect
 import logging as _logging
 import pathlib as _pathlib
 import sys as _sys
-import datetime as _datetime
 
 import cachetools as _cachetools
+from gevent import monkey as _monkey
+
+_monkey.patch_all(thread=False, select=False)
+
 import requests as _requests
 import urllib3 as _urllib3
 import xmltodict as _xmltodict
+
 
 _urllib3.disable_warnings(_urllib3.exceptions.InsecureRequestWarning)
 
@@ -54,7 +59,7 @@ def _setup_logger(name):
     return logger
 
 
-logger = _setup_logger("default")
+_logger = _setup_logger("default")
 
 cache = _cachetools.TTLCache(32, 300)
 
