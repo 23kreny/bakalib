@@ -18,7 +18,7 @@ from threading import Thread
 from ..utils import BakalibError, _setup_logger, request
 
 
-def _is_logged_in_decorator(invert: bool = False):
+def _is_logged_in(invert: bool = False):
     def decorator(func):
         def wrapper(*args, **kwargs):
             if args[0].logged_in ^ invert:
@@ -36,32 +36,10 @@ def _is_logged_in_decorator(invert: bool = False):
 class Client:
     """
     Creates an instance with access to basic information of the user
-
-    Parameters
-    ----------
-    username : str
-        Client username recognizable by school server.
-    domain : str
-        School server domain (without 'http(s)', 'login.aspx').
-
-    Attributes
-    ----------
-    username
-    domain
-    url : str
-        School server URL generated from domain.
-    perm_token : str
-        Permanent token used for 'Remember password' function.
-    token : str
-        Token used for accessing the server.
-
-
-    Methods
-    -------
-    login(password/perm_token: str = None)
-        Logs the user in.
-    info()
-        Obtains user information (school name, year, ...)
+    >>> c = Client("Username123", "domain.example.com/bakaweb")
+    >>> c.login(perm_token="*login*Username123*pwd*blahblah==*sgn*ANDR")
+    >>> c.login(password="secret432", check_valid=False)
+    >>> c.info() # <-- Raises an exception if client is not logged in
     """
 
     def __init__(self, username: str, domain: str):
@@ -82,7 +60,7 @@ class Client:
     def __str__(self):
         return f"Client(username={self.username}, domain={self.domain})"
 
-    @_is_logged_in_decorator(invert=True)
+    @_is_logged_in(invert=True)
     def login(
         self, password: str = None, perm_token: str = None, check_valid: bool = True
     ):
@@ -158,7 +136,7 @@ class Client:
             self.logger.warning(f"TOKEN IS INVALID")
             return False
 
-    @_is_logged_in_decorator()
+    @_is_logged_in
     def info(self) -> "Client.info.Result":
         """
         Obtains basic information about the user into a NamedTuple.

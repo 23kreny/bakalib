@@ -104,10 +104,13 @@ class Municipality:
 
         try:
             s = time()
-            municInfo = ET.fromstring(
-                requests.get(municipality_url, stream=True).content, parser=parser
-            ).iter("municipalityInfo")
-            municInfo = [mInfo for mInfo in municInfo if mInfo.find("name").text]
+            municInfo = [
+                mInfo
+                for mInfo in ET.fromstring(
+                    requests.get(municipality_url, stream=True).content, parser=parser
+                ).iter("municipalityInfo")
+                if mInfo.find("name").text
+            ]
 
             self.logger.debug(f"CITY LIST REQUEST TOOK {time()-s}")
 
