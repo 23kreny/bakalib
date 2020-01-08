@@ -7,6 +7,6 @@ __all__ = ("version",)
 
 MAJOR = 1
 MINOR = 0
-MICRO = 8
+MICRO = 9
 
 version = f"{MAJOR}.{MINOR}.{MICRO}"
