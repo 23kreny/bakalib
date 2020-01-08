@@ -28,6 +28,8 @@ class Timetable(Generic):
         clear_cache(): Clears cache.
     """
 
+    date: datetime.date
+
     def __init__(
         self,
         client: Client = None,

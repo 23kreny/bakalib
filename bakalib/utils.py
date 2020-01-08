@@ -65,7 +65,7 @@ cache = _cachetools.TTLCache(32, 300)
 
 
 @_cachetools.cached(cache)
-def request(url: str, **kwargs) -> dict:
+def request(url: str, **kwargs: str) -> dict:
     """
     Make a GET request to school URL.\n
     Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.
@@ -74,19 +74,19 @@ def request(url: str, **kwargs) -> dict:
     >>> request("https://example.com/login.aspx", hx="token1234=", pm="module_name", pmd="20191219") # pmd is optional
     """
 
-    r = _requests.get(url=url, params=kwargs, verify=False)
-    response = _xmltodict.parse(r.content)
-    results = response.get("results")
+    resp: _requests.Response = _requests.get(url=url, params=kwargs, verify=False)
+    parsed: dict = _xmltodict.parse(resp.content)
+    results: dict = parsed.get("results")
 
     try:
-        res = results.get("res")
-        result = results.get("result")
+        res: dict = results.get("res")
+        result: dict = results.get("result")
     except AttributeError as e:
-        log_args = dict(kwargs)
+        log_args: dict = kwargs.copy()
         log_args.pop(k="hx", d=None)
-        logger.error(log_args)
+        _logger.error(log_args)
 
-    comp = res if res else result
+    comp: str = res if res else result
 
     if not comp == "01":
         raise BakalibError("Received response is invalid")

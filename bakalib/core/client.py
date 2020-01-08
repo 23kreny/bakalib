@@ -42,6 +42,15 @@ class Client:
     >>> c.info() # <-- Raises an exception if client is not logged in
     """
 
+    username: str
+    domain: str
+    url: str
+
+    perm_token: str
+    token: str
+
+    logged_in: bool
+
     def __init__(self, username: str, domain: str):
         super().__init__()
         self.username = username
@@ -96,14 +105,14 @@ class Client:
         """
         self.logger.debug("GENERATING PERM_TOKEN")
         try:
-            res = request(url=self.url, gethx=user)
+            resp = request(url=self.url, gethx=user)
         except BakalibError as e:
             self.logger.warning("PERM_TOKEN IS INVALID")
             raise BakalibError("Invalid username")
 
-        salt = res.get("salt")
-        ikod = res.get("ikod")
-        typ = res.get("typ")
+        salt = resp.get("salt")
+        ikod = resp.get("ikod")
+        typ = resp.get("typ")
         salted_password = (salt + ikod + typ + password).encode("utf-8")
         hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
         perm_token = (
@@ -136,7 +145,7 @@ class Client:
             self.logger.warning(f"TOKEN IS INVALID")
             return False
 
-    @_is_logged_in
+    @_is_logged_in()
     def info(self) -> "Client.info.Result":
         """
         Obtains basic information about the user into a NamedTuple.

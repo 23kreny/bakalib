@@ -17,6 +17,9 @@ class Generic:
     >>> module = Generic(url="domain.example.com/bakaweb", token="abcdefgh12345678")
     """
 
+    url: str
+    token: str
+
     def __init__(
             self, client: Client = None, url: str = None, token: str = None
     ) -> None:
