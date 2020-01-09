@@ -22,5 +22,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["cachetools", "grequests", "lxml", "requests", "xmltodict"],
+    install_requires=["cachetools", "lxml", "requests", "xmltodict"],
 )
