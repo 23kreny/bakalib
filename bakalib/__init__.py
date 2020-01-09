@@ -3,6 +3,10 @@ Bakalib - library for accessing the Bakaláři school system easily!
 
 """
 
-from ._version import version
+__all__ = ("__version__",)
 
-__all__ = ("version",)
+MAJOR = 1
+MINOR = 1
+MICRO = 1
+
+__version__ = f"{MAJOR}.{MINOR}.{MICRO}"

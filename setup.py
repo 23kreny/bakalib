@@ -1,13 +1,13 @@
 from setuptools import find_packages, setup
 
-from bakalib import version
+from bakalib import __version__
 
 with open("README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
 
 setup(
     name="bakalib",
-    version=version,
+    version=__version__,
     author="kreny",
     author_email="kronerm9@gmail.com",
     description="A library for accessing the module data of Bakaláři school system easily",
