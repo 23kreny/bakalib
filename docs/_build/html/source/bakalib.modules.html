@@ -1,0 +1,581 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>bakalib.modules package &mdash; bakalib 1.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> bakalib
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">bakalib.modules package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-bakalib.modules._generic">bakalib.modules._generic module</a><ul>
+<li><a class="reference internal" href="#generic">generic</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-bakalib.modules.grades">bakalib.modules.grades module</a><ul>
+<li><a class="reference internal" href="#grades">grades</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-bakalib.modules.timetable">bakalib.modules.timetable module</a><ul>
+<li><a class="reference internal" href="#timetable">timetable</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-bakalib.modules">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">bakalib</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>bakalib.modules package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/bakalib.modules.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="bakalib-modules-package">
+<h1>bakalib.modules package<a class="headerlink" href="#bakalib-modules-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-bakalib.modules._generic">
+<span id="bakalib-modules-generic-module"></span><h2>bakalib.modules._generic module<a class="headerlink" href="#module-bakalib.modules._generic" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="generic">
+<h3>generic<a class="headerlink" href="#generic" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="bakalib.modules._generic.GenericModule">
+<em class="property">class </em><code class="sig-prename descclassname">bakalib.modules._generic.</code><code class="sig-name descname">GenericModule</code><span class="sig-paren">(</span><em class="sig-param">client: bakalib.core.client.Client = None</em>, <em class="sig-param">url: str = None</em>, <em class="sig-param">token: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules._generic.GenericModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="bakalib.html#bakalib.utils.Base" title="bakalib.utils.Base"><code class="xref py py-class docutils literal notranslate"><span class="pre">bakalib.utils.Base</span></code></a></p>
+<p>Generic module class, used by other modules.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<a class="reference internal" href="bakalib.core.html#bakalib.core.client.Client" title="bakalib.core.client.Client"><em>Client</em></a><em>, </em><em>optional</em>) – Instance of Client, defaults to None</p></li>
+<li><p><strong>url</strong> (<em>str</em><em>, </em><em>optional</em>) – URL of the school server, defaults to None</p></li>
+<li><p><strong>token</strong> (<em>str</em><em>, </em><em>optional</em>) – Token of the client, defaults to None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="bakalib.html#bakalib.utils.BakalibError" title="bakalib.utils.BakalibError"><strong>BakalibError</strong></a> – If Client not logged in</p></li>
+<li><p><a class="reference internal" href="bakalib.html#bakalib.utils.BakalibError" title="bakalib.utils.BakalibError"><strong>BakalibError</strong></a> – If invalid module arguments</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-bakalib.modules.grades">
+<span id="bakalib-modules-grades-module"></span><h2>bakalib.modules.grades module<a class="headerlink" href="#module-bakalib.modules.grades" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="grades">
+<h3>grades<a class="headerlink" href="#grades" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="bakalib.modules.grades.GradesModule">
+<em class="property">class </em><code class="sig-prename descclassname">bakalib.modules.grades.</code><code class="sig-name descname">GradesModule</code><span class="sig-paren">(</span><em class="sig-param">client: bakalib.core.client.Client = None</em>, <em class="sig-param">url: str = None</em>, <em class="sig-param">token: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.grades.GradesModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bakalib.modules._generic.GenericModule" title="bakalib.modules._generic.GenericModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">bakalib.modules._generic.GenericModule</span></code></a></p>
+<p>This is a class for accessing grades of a client</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<a class="reference internal" href="bakalib.core.html#bakalib.core.client.Client" title="bakalib.core.client.Client"><em>Client</em></a><em>, </em><em>optional</em>) – Instance of Client, defaults to None</p></li>
+<li><p><strong>url</strong> (<em>str</em><em>, </em><em>optional</em>) – URL of the school server, defaults to None</p></li>
+<li><p><strong>token</strong> (<em>str</em><em>, </em><em>optional</em>) – Access token of a client, defaults to None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="bakalib.modules.grades.GradesModule.Grade">
+<em class="property">class </em><code class="sig-name descname">Grade</code><span class="sig-paren">(</span><em class="sig-param">subject: str</em>, <em class="sig-param">max_points: str</em>, <em class="sig-param">grade: str</em>, <em class="sig-param">gr: str</em>, <em class="sig-param">points: str</em>, <em class="sig-param">date: str</em>, <em class="sig-param">date_granted: str</em>, <em class="sig-param">weight: str</em>, <em class="sig-param">caption: str</em>, <em class="sig-param">note: str</em>, <em class="sig-param">type: str</em>, <em class="sig-param">description: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.grades.GradesModule.Grade" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.grades.GradesModule.Subject">
+<em class="property">class </em><code class="sig-name descname">Subject</code><span class="sig-paren">(</span><em class="sig-param">name: str, abbr: str, average_round: str, average: str, recalculation: str, points_to_grade: str, quarter: str, note: str, glob_note: str, grades: List[ForwardRef('GradesModule.Grade')]</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.grades.GradesModule.Subject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.grades.GradesModule.subjects">
+<code class="sig-name descname">subjects</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List[bakalib.modules.grades.GradesModule.Subject]<a class="headerlink" href="#bakalib.modules.grades.GradesModule.subjects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches all subjects and grades</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="bakalib.html#bakalib.utils.BakalibError" title="bakalib.utils.BakalibError"><strong>BakalibError</strong></a> – If no grades returned</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing subjects list</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>GradesModule.Result</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-bakalib.modules.timetable">
+<span id="bakalib-modules-timetable-module"></span><h2>bakalib.modules.timetable module<a class="headerlink" href="#module-bakalib.modules.timetable" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="timetable">
+<h3>timetable<a class="headerlink" href="#timetable" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="bakalib.modules.timetable.TimetableModule">
+<em class="property">class </em><code class="sig-prename descclassname">bakalib.modules.timetable.</code><code class="sig-name descname">TimetableModule</code><span class="sig-paren">(</span><em class="sig-param">client: bakalib.core.client.Client = None</em>, <em class="sig-param">url: str = None</em>, <em class="sig-param">token: str = None</em>, <em class="sig-param">date: datetime.date = datetime.date(2020</em>, <em class="sig-param">1</em>, <em class="sig-param">9)</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.timetable.TimetableModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bakalib.modules._generic.GenericModule" title="bakalib.modules._generic.GenericModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">bakalib.modules._generic.GenericModule</span></code></a></p>
+<p>This is a class for accessing timetables of a client</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<a class="reference internal" href="bakalib.core.html#bakalib.core.client.Client" title="bakalib.core.client.Client"><em>Client</em></a><em>, </em><em>optional</em>) – Instance of a client, defaults to None</p></li>
+<li><p><strong>url</strong> (<em>str</em><em>, </em><em>optional</em>) – URL of the school server, defaults to None</p></li>
+<li><p><strong>token</strong> (<em>str</em><em>, </em><em>optional</em>) – Access token, defaults to None</p></li>
+<li><p><strong>date</strong> (<em>datetime.date</em><em>, </em><em>optional</em>) – Initial date, defaults to datetime.date.today()</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="bakalib.modules.timetable.TimetableModule.Day">
+<em class="property">class </em><code class="sig-name descname">Day</code><span class="sig-paren">(</span><em class="sig-param">abbr: str, date: str, lessons: List[ForwardRef('TimetableModule.Lesson')]</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.Day" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.timetable.TimetableModule.Header">
+<em class="property">class </em><code class="sig-name descname">Header</code><span class="sig-paren">(</span><em class="sig-param">caption: str</em>, <em class="sig-param">time_begin: str</em>, <em class="sig-param">time_end: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.Header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.timetable.TimetableModule.Lesson">
+<em class="property">class </em><code class="sig-name descname">Lesson</code><span class="sig-paren">(</span><em class="sig-param">id_code: str</em>, <em class="sig-param">type: str</em>, <em class="sig-param">holiday: str</em>, <em class="sig-param">abbr: str</em>, <em class="sig-param">name: str</em>, <em class="sig-param">teacher_abbr: str</em>, <em class="sig-param">teacher: str</em>, <em class="sig-param">room_abbr: str</em>, <em class="sig-param">room: str</em>, <em class="sig-param">absence_abbr: str</em>, <em class="sig-param">absence: str</em>, <em class="sig-param">theme: str</em>, <em class="sig-param">group_abbr: str</em>, <em class="sig-param">group: str</em>, <em class="sig-param">cycle: str</em>, <em class="sig-param">disengaged: str</em>, <em class="sig-param">change_description: str</em>, <em class="sig-param">notice: str</em>, <em class="sig-param">caption: str</em>, <em class="sig-param">time_begin: str</em>, <em class="sig-param">time_end: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.Lesson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.timetable.TimetableModule.Result">
+<em class="property">class </em><code class="sig-name descname">Result</code><span class="sig-paren">(</span><em class="sig-param">headers: List[ForwardRef('TimetableModule.Header')], days: List[ForwardRef('TimetableModule.Day')], cycle_name: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.Result" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.timetable.TimetableModule.clear_cache">
+<code class="sig-name descname">clear_cache</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.clear_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears all entries related to timetable from cache</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.timetable.TimetableModule.date_week">
+<code class="sig-name descname">date_week</code><span class="sig-paren">(</span><em class="sig-param">date: datetime.date = None</em>, <em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.date_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches timetable data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> (<em>datetime.date</em><em>, </em><em>optional</em>) – Date used to fetch the data, defaults to None</p></li>
+<li><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.timetable.TimetableModule.next_week">
+<code class="sig-name descname">next_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.next_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.timetable.TimetableModule.prev_week">
+<code class="sig-name descname">prev_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.prev_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.timetable.TimetableModule.this_week">
+<code class="sig-name descname">this_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.timetable.TimetableModule.this_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-bakalib.modules">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-bakalib.modules" title="Permalink to this headline">¶</a></h2>
+<p>Modules package</p>
+<dl class="class">
+<dt id="bakalib.modules.GradesModule">
+<em class="property">class </em><code class="sig-prename descclassname">bakalib.modules.</code><code class="sig-name descname">GradesModule</code><span class="sig-paren">(</span><em class="sig-param">client: bakalib.core.client.Client = None</em>, <em class="sig-param">url: str = None</em>, <em class="sig-param">token: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.GradesModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bakalib.modules._generic.GenericModule" title="bakalib.modules._generic.GenericModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">bakalib.modules._generic.GenericModule</span></code></a></p>
+<p>This is a class for accessing grades of a client</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<a class="reference internal" href="bakalib.core.html#bakalib.core.client.Client" title="bakalib.core.client.Client"><em>Client</em></a><em>, </em><em>optional</em>) – Instance of Client, defaults to None</p></li>
+<li><p><strong>url</strong> (<em>str</em><em>, </em><em>optional</em>) – URL of the school server, defaults to None</p></li>
+<li><p><strong>token</strong> (<em>str</em><em>, </em><em>optional</em>) – Access token of a client, defaults to None</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="bakalib.modules.GradesModule.Grade">
+<em class="property">class </em><code class="sig-name descname">Grade</code><span class="sig-paren">(</span><em class="sig-param">subject: str</em>, <em class="sig-param">max_points: str</em>, <em class="sig-param">grade: str</em>, <em class="sig-param">gr: str</em>, <em class="sig-param">points: str</em>, <em class="sig-param">date: str</em>, <em class="sig-param">date_granted: str</em>, <em class="sig-param">weight: str</em>, <em class="sig-param">caption: str</em>, <em class="sig-param">note: str</em>, <em class="sig-param">type: str</em>, <em class="sig-param">description: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.GradesModule.Grade" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.GradesModule.Subject">
+<em class="property">class </em><code class="sig-name descname">Subject</code><span class="sig-paren">(</span><em class="sig-param">name: str, abbr: str, average_round: str, average: str, recalculation: str, points_to_grade: str, quarter: str, note: str, glob_note: str, grades: List[ForwardRef('GradesModule.Grade')]</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.GradesModule.Subject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.GradesModule.subjects">
+<code class="sig-name descname">subjects</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List[bakalib.modules.grades.GradesModule.Subject]<a class="headerlink" href="#bakalib.modules.GradesModule.subjects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches all subjects and grades</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="bakalib.html#bakalib.utils.BakalibError" title="bakalib.utils.BakalibError"><strong>BakalibError</strong></a> – If no grades returned</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing subjects list</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>GradesModule.Result</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.TimetableModule">
+<em class="property">class </em><code class="sig-prename descclassname">bakalib.modules.</code><code class="sig-name descname">TimetableModule</code><span class="sig-paren">(</span><em class="sig-param">client: bakalib.core.client.Client = None</em>, <em class="sig-param">url: str = None</em>, <em class="sig-param">token: str = None</em>, <em class="sig-param">date: datetime.date = datetime.date(2020</em>, <em class="sig-param">1</em>, <em class="sig-param">9)</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.TimetableModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bakalib.modules._generic.GenericModule" title="bakalib.modules._generic.GenericModule"><code class="xref py py-class docutils literal notranslate"><span class="pre">bakalib.modules._generic.GenericModule</span></code></a></p>
+<p>This is a class for accessing timetables of a client</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>client</strong> (<a class="reference internal" href="bakalib.core.html#bakalib.core.client.Client" title="bakalib.core.client.Client"><em>Client</em></a><em>, </em><em>optional</em>) – Instance of a client, defaults to None</p></li>
+<li><p><strong>url</strong> (<em>str</em><em>, </em><em>optional</em>) – URL of the school server, defaults to None</p></li>
+<li><p><strong>token</strong> (<em>str</em><em>, </em><em>optional</em>) – Access token, defaults to None</p></li>
+<li><p><strong>date</strong> (<em>datetime.date</em><em>, </em><em>optional</em>) – Initial date, defaults to datetime.date.today()</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="bakalib.modules.TimetableModule.Day">
+<em class="property">class </em><code class="sig-name descname">Day</code><span class="sig-paren">(</span><em class="sig-param">abbr: str, date: str, lessons: List[ForwardRef('TimetableModule.Lesson')]</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.TimetableModule.Day" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.TimetableModule.Header">
+<em class="property">class </em><code class="sig-name descname">Header</code><span class="sig-paren">(</span><em class="sig-param">caption: str</em>, <em class="sig-param">time_begin: str</em>, <em class="sig-param">time_end: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.TimetableModule.Header" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.TimetableModule.Lesson">
+<em class="property">class </em><code class="sig-name descname">Lesson</code><span class="sig-paren">(</span><em class="sig-param">id_code: str</em>, <em class="sig-param">type: str</em>, <em class="sig-param">holiday: str</em>, <em class="sig-param">abbr: str</em>, <em class="sig-param">name: str</em>, <em class="sig-param">teacher_abbr: str</em>, <em class="sig-param">teacher: str</em>, <em class="sig-param">room_abbr: str</em>, <em class="sig-param">room: str</em>, <em class="sig-param">absence_abbr: str</em>, <em class="sig-param">absence: str</em>, <em class="sig-param">theme: str</em>, <em class="sig-param">group_abbr: str</em>, <em class="sig-param">group: str</em>, <em class="sig-param">cycle: str</em>, <em class="sig-param">disengaged: str</em>, <em class="sig-param">change_description: str</em>, <em class="sig-param">notice: str</em>, <em class="sig-param">caption: str</em>, <em class="sig-param">time_begin: str</em>, <em class="sig-param">time_end: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.TimetableModule.Lesson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="bakalib.modules.TimetableModule.Result">
+<em class="property">class </em><code class="sig-name descname">Result</code><span class="sig-paren">(</span><em class="sig-param">headers: List[ForwardRef('TimetableModule.Header')], days: List[ForwardRef('TimetableModule.Day')], cycle_name: str</em><span class="sig-paren">)</span><a class="headerlink" href="#bakalib.modules.TimetableModule.Result" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.TimetableModule.clear_cache">
+<code class="sig-name descname">clear_cache</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#bakalib.modules.TimetableModule.clear_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clears all entries related to timetable from cache</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.TimetableModule.date_week">
+<code class="sig-name descname">date_week</code><span class="sig-paren">(</span><em class="sig-param">date: datetime.date = None</em>, <em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.TimetableModule.date_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetches timetable data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date</strong> (<em>datetime.date</em><em>, </em><em>optional</em>) – Date used to fetch the data, defaults to None</p></li>
+<li><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.TimetableModule.next_week">
+<code class="sig-name descname">next_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.TimetableModule.next_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.TimetableModule.prev_week">
+<code class="sig-name descname">prev_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.TimetableModule.prev_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="bakalib.modules.TimetableModule.this_week">
+<code class="sig-name descname">this_week</code><span class="sig-paren">(</span><em class="sig-param">prune: bool = True</em><span class="sig-paren">)</span> &#x2192; bakalib.modules.timetable.TimetableModule.Result<a class="headerlink" href="#bakalib.modules.TimetableModule.this_week" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prune</strong> (<em>bool</em><em>, </em><em>optional</em>) – Remove unnecessary empty lessons, defaults to True</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataclass containing all days</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#bakalib.modules.timetable.TimetableModule.Result" title="bakalib.modules.timetable.TimetableModule.Result">TimetableModule.Result</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, kreny
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

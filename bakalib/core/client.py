@@ -13,12 +13,19 @@ import base64
 import datetime
 import hashlib
 from dataclasses import dataclass
-from threading import Thread
 
-from ..utils import BakalibError, _setup_logger, request
+from ..utils import Base, BakalibError, _setup_logger
 
 
 def _is_logged_in(invert: bool = False):
+    """Checks if arg[0] (Client) is logged in.
+    
+    :param invert: Inverts the check, defaults to False
+    :type invert: bool, optional
+    :raises BakalibError: If Client is not logged in
+    :raises BakalibError: If Client is already logged in
+    """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             if args[0].logged_in ^ invert:
@@ -33,17 +40,16 @@ def _is_logged_in(invert: bool = False):
     return decorator
 
 
-class Client:
-    """
-    Creates an instance with access to basic information of the user
-    >>> c = Client("Username123", "domain.example.com/bakaweb")
-    >>> c.login(perm_token="*login*Username123*pwd*blahblah==*sgn*ANDR")
-    >>> c.login(password="secret432", check_valid=False)
-    >>> c.info() # <-- Raises an exception if client is not logged in
+class Client(Base):
+    """This is a class representing a user on a school server. It needs to be logged in (:meth:`.Client.login`) before using with other components. 
+        
+    :param username: Name of the user
+    :type username: str
+    :param url: URL address of the school server
+    :type url: str
     """
 
     username: str
-    domain: str
     url: str
 
     perm_token: str
@@ -51,33 +57,59 @@ class Client:
 
     logged_in: bool
 
-    def __init__(self, username: str, domain: str):
-        super().__init__()
+    @dataclass(frozen=True)
+    class Info:
+        version: str
+        name: str
+        type_abbr: str
+        type: str
+        school: str
+        school_type: str
+        class_: str
+        year: str
+        modules: str
+        newmarkdays: str
+
+    def __init__(self, username: str, url: str):
+        """Constructor method
+        """
         self.username = username
-        self.domain = domain
-        self.url = f"https://{self.domain}/login.aspx"
+        self.url = url
 
         self.perm_token = None
         self.token = None
-        self.thread = Thread()
-        self.logger = _setup_logger(f"client_{self.username}")
 
         self.logged_in = False
 
-        self.logger.info(f"CLIENT CREATED")
+        self.logger = _setup_logger(f"[CLIENT_{self.username}]")
+        self.logger.debug(f"INITIALIZED")
 
     def __str__(self):
-        return f"Client(username={self.username}, domain={self.domain})"
+        return f"Client(username={self.username}, url={self.url})"
+
+    def __repr__(self):
+        return {"username": self.username, "url": self.url}
 
     @_is_logged_in(invert=True)
     def login(
         self, password: str = None, perm_token: str = None, check_valid: bool = True
     ):
+        """Logs the client in
+        
+        :param password: Password, defaults to None
+        :type password: str, optional
+        :param perm_token: Permanent token generated from password, defaults to None
+        :type perm_token: str, optional
+        :param check_valid: Checks if the session is valid after logging in, defaults to True
+        :type check_valid: bool, optional
+        :raises BakalibError: If incorrect arguments are provided
+        :raises BakalibError: If generated login token is invalid (wrong password/perm_token)
+        """
         if perm_token:
             self.perm_token = perm_token
             token = self._token(self.perm_token)
         elif password:
-            self.perm_token = self._permanent_token(self.username, password)
+            self.perm_token = self._permanent_token(password)
             token = self._token(self.perm_token)
         else:
             raise BakalibError("Incorrect arguments")
@@ -90,22 +122,21 @@ class Client:
         else:
             self.token = token
 
-        self.thread = Thread(
-            target=request, args=(self.url,), kwargs={"hx": self.token, "pm": "login"}
-        )
-        self.thread.start()
-        self.logger.info(f"INFO THREAD STARTED")
-
         self.logged_in = True
         self.logger.info(f"LOGGED IN SUCCESSFULLY")
 
-    def _permanent_token(self, user: str, password: str) -> str:
-        """
-        Generates a permanent access token with securely hashed password.
+    def _permanent_token(self, password: str) -> str:
+        """Generates a permanent token which can be used for login
+        
+        :param password: Password
+        :type password: str
+        :raises BakalibError: If the username is not found on the server
+        :return: Permanent token
+        :rtype: str
         """
         self.logger.debug("GENERATING PERM_TOKEN")
         try:
-            resp = request(url=self.url, gethx=user)
+            resp = self.request(gethx=self.username)
         except BakalibError as e:
             self.logger.warning("PERM_TOKEN IS INVALID")
             raise BakalibError("Invalid username")
@@ -113,17 +144,21 @@ class Client:
         salt = resp.get("salt")
         ikod = resp.get("ikod")
         typ = resp.get("typ")
-        salted_password = (salt + ikod + typ + password).encode("utf-8")
+        salted_password = f"{salt}{ikod}{typ}{password}".encode("utf-8")
         hashed_password = base64.b64encode(hashlib.sha512(salted_password).digest())
         perm_token = (
-            "*login*" + user + "*pwd*" + hashed_password.decode("utf8") + "*sgn*ANDR"
+            f"*login*{self.username}*pwd*{hashed_password.decode('utf8')}*sgn*ANDR"
         )
         self.logger.debug("PERM_TOKEN GENERATED")
         return perm_token
 
     def _token(self, perm_token: str) -> str:
-        """
-        Generates an access token using current time.
+        """Generates an access token using current time
+        
+        :param perm_token: Permanent token generated by :meth:`.Client._permanent_token`
+        :type perm_token: str
+        :return: Access token
+        :rtype: str
         """
         self.logger.debug("GENERATING ACCESS TOKEN")
         today = datetime.date.today()
@@ -134,11 +169,15 @@ class Client:
         return token
 
     def _is_token_valid(self, token: str) -> bool:
-        """
-        Checks for token validity.
+        """Checks if generated token from :meth:`.Client._token` is valid
+        
+        :param token: Access token
+        :type token: str
+        :return: True of False, depends on the result
+        :rtype: bool
         """
         try:
-            request(url=self.url, hx=token, pm="login")
+            self.request(hx=token, pm="login")
             self.logger.info(f"TOKEN IS VALID")
             return True
         except BakalibError:
@@ -146,33 +185,15 @@ class Client:
             return False
 
     @_is_logged_in()
-    def info(self) -> "Client.info.Result":
+    def info(self) -> "Client.Info":
+        """Fetches information about the current user
+        
+        :return: Dataclass containing user information
+        :rtype: Client.Info
         """
-        Obtains basic information about the user into a NamedTuple.
-        >>> user.info().name
-        >>> user.info().class_ # <-- due to class being a reserved keyword.
-        >>> user.info().school
-        """
-        if self.thread.is_alive():
-            self.logger.info(f"INFO THREAD RUNNING")
-            self.thread.join()
-            self.logger.info(f"INFO THREAD FINISHED")
 
-        @dataclass(frozen=True)
-        class Result:
-            version: str
-            name: str
-            type_abbr: str
-            type: str
-            school: str
-            school_type: str
-            class_: str
-            year: str
-            modules: str
-            newmarkdays: str
-
-        response = request(url=self.url, hx=self.token, pm="login")
-        result = Result(
+        response = self.request(hx=self.token, pm="login")
+        result = self.Info(
             *[
                 response.get(element).get("newmarkdays")
                 if element == "params"

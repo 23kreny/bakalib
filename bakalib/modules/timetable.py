@@ -3,32 +3,77 @@ timetable
 =========
 """
 
-__all__ = ("Timetable",)
+__all__ = ("TimetableModule",)
 
 import datetime
 import html
-from concurrent.futures.thread import ThreadPoolExecutor
 from dataclasses import dataclass
-
+from typing import List
+from cachetools import cached
 from ..core.client import Client
-from ..utils import _setup_logger, cache, request
-from ._generic import Generic
+from ..utils import _setup_logger, cache
+from ._generic import GenericModule
 
 
-class Timetable(Generic):
-    """
-    Obtains information from the "rozvrh" module of Bakaláři.
-    >>> timetable = Timetable(url, token)
-    >>> timetable = Timetable(client) # <- You can also use a `Client` instance
-    Methods:
-        prev_week(prune: bool): Decrements self.date by 7 days and points to self.date_week.
-        this_week(prune: bool): Points to date_week() with current date.
-        next_week(prune: bool): Increments self.date by 7 days and points to self.date_week.
-        date_week(date: datetime.date, prune: bool): Obtains timetable data about the week of the provided date.
-        clear_cache(): Clears cache.
+class TimetableModule(GenericModule):
+    """This is a class for accessing timetables of a client
+    
+    :param client: Instance of a client, defaults to None
+    :type client: Client, optional
+    :param url: URL of the school server, defaults to None
+    :type url: str, optional
+    :param token: Access token, defaults to None
+    :type token: str, optional
+    :param date: Initial date, defaults to datetime.date.today()
+    :type date: datetime.date, optional
     """
 
     date: datetime.date
+
+    @dataclass(frozen=True)
+    class Header:
+        caption: str
+        time_begin: str
+        time_end: str
+
+    @dataclass(frozen=True)
+    class Lesson:
+        id_code: str
+        type: str
+        holiday: str
+        abbr: str
+        name: str
+        teacher_abbr: str
+        teacher: str
+        room_abbr: str
+        room: str
+        absence_abbr: str
+        absence: str
+        theme: str
+        group_abbr: str
+        group: str
+        cycle: str
+        disengaged: str
+        change_description: str
+        notice: str
+        caption: str
+        time_begin: str
+        time_end: str
+
+    @dataclass(frozen=True)
+    class Day:
+        abbr: str
+        date: str
+        lessons: List["TimetableModule.Lesson"]
+
+        def __len__(self):
+            return len(self.lessons)
+
+    @dataclass(frozen=True)
+    class Result:
+        headers: List["TimetableModule.Header"]
+        days: List["TimetableModule.Day"]
+        cycle_name: str
 
     def __init__(
         self,
@@ -37,117 +82,66 @@ class Timetable(Generic):
         token: str = None,
         date: datetime.date = datetime.date.today(),
     ):
+        """Constructor method
+        """
         super().__init__(client=client, url=url, token=token)
         self.date = date
-        self.logger = _setup_logger(f"timetable_{client.username}")
-
-        self.threadpool = ThreadPoolExecutor(max_workers=8)
-        self.logger.info("TIMETABLE THREADPOOL CREATED")
-        self.threadpool.submit(self._date_week, self.date)
-        self.logger.info("TASK SUBMITTED")
+        self.logger = _setup_logger(f"[TIMETABLE_{client.username}]")
 
     # ----------------------------------------------------
 
-    def prev_week(self, prune: bool = True) -> "Timetable._date_week.Result":
+    def prev_week(self, prune: bool = True) -> "TimetableModule.Result":
+        """Convenience method
+        
+        :param prune: Remove unnecessary empty lessons, defaults to True
+        :type prune: bool, optional
+        :return: Dataclass containing all days
+        :rtype: TimetableModule.Result
+        """
         self.date = self.date - datetime.timedelta(7)
-        return self.date_week(self.date, prune=prune)
+        return self.date_week(self.date, prune)
 
-    def this_week(self, prune: bool = True) -> "Timetable._date_week.Result":
+    def this_week(self, prune: bool = True) -> "TimetableModule.Result":
+        """Convenience method
+        
+        :param prune: Remove unnecessary empty lessons, defaults to True
+        :type prune: bool, optional
+        :return: Dataclass containing all days
+        :rtype: TimetableModule.Result
+        """
         self.date = datetime.date.today()
-        return self.date_week(self.date, prune=prune)
+        return self.date_week(self.date, prune)
 
-    def next_week(self, prune: bool = True) -> "Timetable._date_week.Result":
+    def next_week(self, prune: bool = True) -> "TimetableModule.Result":
+        """Convenience method
+        
+        :param prune: Remove unnecessary empty lessons, defaults to True
+        :type prune: bool, optional
+        :return: Dataclass containing all days
+        :rtype: TimetableModule.Result
+        """
         self.date = self.date + datetime.timedelta(7)
-        return self.date_week(self.date, prune=prune)
+        return self.date_week(self.date, prune)
 
     # ----------------------------------------------------
 
     def date_week(
         self, date: datetime.date = None, prune: bool = True
-    ) -> "Timetable._date_week.Result":
+    ) -> "TimetableModule.Result":
+        """Fetches timetable data
+        
+        :param date: Date used to fetch the data, defaults to None
+        :type date: datetime.date, optional
+        :param prune: Remove unnecessary empty lessons, defaults to True
+        :type prune: bool, optional
+        :return: Dataclass containing all days
+        :rtype: TimetableModule.Result
         """
-        Obtains all timetable data about the week of the provided date.
-        >>> this_week = timetable.date_week(datetime.date.today())
-        >>> this_week = timetable.date_week(datetime.date.today(), prune=False) # <- Use this if you want to preserve empty lessons.
-        >>> for header in this_week.headers:
-        >>>     header.caption
-        >>> for day in this_week.days:
-        >>>     day.abbr
-        >>>     for lesson in day.lessons:
-        >>>         lesson.name
-        >>>         lesson.teacher
-        """
-        self.date = date if date else self.date
         date_str = "{:04}{:02}{:02}".format(
             self.date.year, self.date.month, self.date.day
         )
 
-        if not (self.url, self.token, "rozvrh", date_str) in cache:
-            self.threadpool.shutdown(wait=True)
-            self.logger.info("STOPPED, CREATING NEW THREADPOOL")
-            self.threadpool = ThreadPoolExecutor(max_workers=8)
-            self.logger.info("NEW THREADPOOL CREATED")
-
-        self.threadpool.submit(self._date_week, self.date - datetime.timedelta(7))
-        self.threadpool.submit(self._date_week, self.date + datetime.timedelta(7))
-        self.logger.info("NEW TASKS SUBMITTED")
-
-        return self._date_week(self.date, prune=prune)
-
-    def _date_week(
-        self, date: datetime.date, prune: bool = True
-    ) -> "Timetable._date_week.Result":
-        date_str = "{:04}{:02}{:02}".format(date.year, date.month, date.day)
-
-        response = request(url=self.url, hx=self.token, pm="rozvrh", pmd=date_str)
-
-        @dataclass(frozen=True)
-        class Result:
-            headers: list
-            days: list
-            cycle_name: str
-
-            def __len__(self):
-                return len(self.days)
-
-        @dataclass(frozen=True)
-        class Header:
-            caption: str
-            time_begin: str
-            time_end: str
-
-        @dataclass(frozen=True)
-        class Day:
-            abbr: str
-            date: str
-            lessons: list
-
-            def __len__(self):
-                return len(self.lessons)
-
-        @dataclass(frozen=True)
-        class Lesson:
-            id_code: str
-            type: str
-            holiday: str
-            abbr: str
-            name: str
-            teacher_abbr: str
-            teacher: str
-            room_abbr: str
-            room: str
-            absence_abbr: str
-            absence: str
-            theme: str
-            group_abbr: str
-            group: str
-            cycle: str
-            disengaged: str
-            change_description: str
-            notice: str
-            caption: str
-            time_begin: str
-            time_end: str
+        response = self.request(hx=self.token, pm="rozvrh", pmd=date_str)
 
         def holiday_check(obj: dict):
             zkratka = obj.get("zkratka")
@@ -162,15 +156,15 @@ class Timetable(Generic):
                 return None
 
         headers = [
-            Header(header["caption"], header["begintime"], header["endtime"])
+            self.Header(header["caption"], header["begintime"], header["endtime"])
             for header in response["rozvrh"]["hodiny"]["hod"]
         ]
         days = [
-            Day(
+            self.Day(
                 day["zkratka"],
                 day["datum"],
                 [
-                    Lesson(
+                    self.Lesson(
                         lesson.get("idcode"),
                         lesson.get("typ"),
                         holiday_check(lesson),
@@ -235,7 +229,7 @@ class Timetable(Generic):
                 longest_day = max(days, key=len)
 
             headers = [
-                Header(lesson.caption, lesson.time_begin, lesson.time_end)
+                self.Header(lesson.caption, lesson.time_begin, lesson.time_end)
                 for lesson in (
                     longest_day.lessons if longest_day else max(days, key=len)
                 )
@@ -245,12 +239,10 @@ class Timetable(Generic):
                 while len(day.lessons) < max(lengths):
                     day.lessons.append(placeholder_lesson)
 
-        return Result(headers, days, response["rozvrh"]["nazevcyklu"])
+        return self.Result(headers, days, response["rozvrh"]["nazevcyklu"])
 
     def clear_cache(self) -> None:
-        """
-        Clears all entries related to the "rozvrh" module from global cache.
-        >>> timetable.clear_cache()
+        """Clears all entries related to timetable from cache
         """
         for entry in cache:
             if "rozvrh" in entry:

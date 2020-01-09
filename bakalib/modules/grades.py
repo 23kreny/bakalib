@@ -3,56 +3,72 @@ grades
 ======
 """
 
-__all__ = ("Grades",)
+__all__ = ("GradesModule",)
 
 from dataclasses import dataclass
-from threading import Thread
+from typing import List
 
 from ..core.client import Client
-from ..utils import BakalibError, _setup_logger, cache, request
-from ._generic import Generic
+from ..utils import BakalibError, _setup_logger
+from ._generic import GenericModule
 
 
-class Grades(Generic):
+class GradesModule(GenericModule):
+    """This is a class for accessing grades of a client
+    
+    :param client: Instance of Client, defaults to None
+    :type client: Client, optional
+    :param url: URL of the school server, defaults to None
+    :type url: str, optional
+    :param token: Access token of a client, defaults to None
+    :type token: str, optional
     """
-    Obtains information from the "znamky" module of Bakaláři.
-    >>> grades = Grades(url, token)
-    >>> grades = Grades(client) # <- You can also use a `Client` instance
-    >>> for subject in grades.grades().subjects:
-    >>>     for grade in subject.grades:
-    >>>         print(grade.subject)
-    >>>         print(grade.caption)
-    >>>         print(grade.grade)
-    Methods:
-        grades(): Retrieves all grades.
-        clear_cache(): Clears cache.
-    """
+
+    @dataclass(frozen=True)
+    class Grade:
+        subject: str
+        max_points: str
+        grade: str
+        gr: str
+        points: str
+        date: str
+        date_granted: str
+        weight: str
+        caption: str
+        note: str
+        type: str
+        description: str
+
+    @dataclass(frozen=True)
+    class Subject:
+        name: str
+        abbr: str
+        average_round: str
+        average: str
+        recalculation: str
+        points_to_grade: str
+        quarter: str
+        note: str
+        glob_note: str
+        grades: List["GradesModule.Grade"]
+
+        def __len__(self):
+            return len(self.grades)
 
     def __init__(self, client: Client = None, url: str = None, token: str = None):
+        """Constructor method
+        """
         super().__init__(client=client, url=url, token=token)
-        self.logger = _setup_logger(f"grades_{client.username}")
+        self.logger = _setup_logger(f"[GRADES_{client.username}]")
 
-        self.thread = Thread(target=self._grades)
-        self.thread.start()
-        self.logger.info(f"GRADES THREAD STARTED")
-
-    def grades(self) -> "Grades._grades.Result":
+    def subjects(self) -> List["GradesModule.Subject"]:
+        """Fetches all subjects and grades
+        
+        :raises BakalibError: If no grades returned
+        :return: Dataclass containing subjects list
+        :rtype: GradesModule.Result
         """
-        Retrieves all grades.
-        >>> for subject in grades.grades().subjects:
-        >>>     subject.name
-        >>>     for grade in subject.grades:
-        >>>         grade.caption
-        >>>         grade.grade
-        """
-        if self.thread.is_alive():
-            self.logger.info("GRADES THREAD RUNNING")
-            self.thread.join()
-            self.logger.info("GRADES THREAD FINISHED")
-        return self._grades()
-
-    def _grades(self) -> "Grades._grades.Result":
-        response = request(url=self.url, hx=self.token, pm="znamky")
+        response = self.request(hx=self.token, pm="znamky")
         if response["predmety"] is None:
             raise BakalibError("Grades module returned None, no grades were found.")
 
@@ -62,46 +78,8 @@ class Grades(Generic):
                     subject["znamky"]["znamka"]
                 ]
 
-        @dataclass(frozen=True)
-        class Result:
-            subjects: list
-
-            def __len__(self):
-                return len(self.subjects)
-
-        @dataclass(frozen=True)
-        class Subject:
-            name: str
-            abbr: str
-            average_round: str
-            average: str
-            recalculation: str
-            points_to_grade: str
-            quarter: str
-            note: str
-            glob_note: str
-            grades: list
-
-            def __len__(self):
-                return len(self.grades)
-
-        @dataclass(frozen=True)
-        class Grade:
-            subject: str
-            max_points: str
-            grade: str
-            gr: str
-            points: str
-            date: str
-            date_granted: str
-            weight: str
-            caption: str
-            note: str
-            type: str
-            description: str
-
-        subjects = [
-            Subject(
+        return [
+            self.Subject(
                 subject["nazev"],
                 subject["zkratka"],
                 subject["prumer"],
@@ -112,7 +90,7 @@ class Grades(Generic):
                 subject["pozn"],
                 subject["globpozn"],
                 [
-                    Grade(
+                    self.Grade(
                         grade.get("pred"),
                         grade.get("maxb"),
                         grade.get("znamka"),
@@ -131,13 +109,3 @@ class Grades(Generic):
             )
             for subject in response["predmety"]["predmet"]
         ]
-        return Result(subjects)
-
-    def clear_cache(self) -> None:
-        """
-        Clear all entries related to the "znamky" module from global cache.
-        >>> grades.clear_cache()
-        """
-        for entry in cache:
-            if "znamky" in entry:
-                cache.pop(entry)

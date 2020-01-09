@@ -1,10 +1,6 @@
 """
 Extra package
 
-contents:
-
-    municipality
-
 """
 
 from .municipality import Municipality

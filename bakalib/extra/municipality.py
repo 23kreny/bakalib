@@ -6,166 +6,86 @@ municipality
 __all__ = ("Municipality",)
 
 import dataclasses
-import json
-import re
-from threading import Thread
+from typing import List
 
-import grequests
 import requests
+import xmltodict
+from cachetools import cached
 
-from ..utils import BakalibError, _setup_logger, data_dir
+from ..utils import BakalibError, _setup_logger, cache
 
 
 class Municipality:
-    """
-    Provides info about all schools that use the Bakaláři system.\n
-        >>> m = Municipality()
-        >>> for city in m.municipality().cities:
-        >>>     print(city.name)
-        >>>     for school in city.schools:
-        >>>         print(school.name)
-        >>>         print(school.domain)
-    Methods:\n
-            municipality(): Returns your local database as a NamedTuple
-            build(): Builds the local database from 'https://sluzby.bakalari.cz/api/v1/municipality'.
-                     Library comes prepackaged with a database json. Use only when needed.
+    """This is a container for certain methods for fetching cities and schools using Bakaláři school system
+    
+    :raises RuntimeError: If the class gets instantiated
     """
 
-    db_file = data_dir.joinpath("municipality", "db.json")
-
-    @dataclasses.dataclass(frozen=True)
-    class Result:
-        cities: list
-
-        def __len__(self):
-            return len(self.cities)
+    municipality_url = "https://sluzby.bakalari.cz/api/v1/municipality/"
+    logger = _setup_logger("[MUNICIPALITY]")
 
     @dataclasses.dataclass(frozen=True)
     class City:
         name: str
-        school_count: str
-        schools: list
-
-        def __len__(self):
-            return len(self.schools)
+        school_count: int
 
     @dataclasses.dataclass(frozen=True)
     class School:
         id: str
         name: str
-        domain: str
+        url: str
 
-    def __init__(self):
-        self.logger = _setup_logger("municipality")
+    def __new__(cls, *args, **kwargs):
+        raise RuntimeError(f"{cls} should not be instantiated!")
 
-        self.thread = Thread(target=self._municipality)
-        self.thread.start()
-        self.logger.info("MUNICIPALITY THREAD STARTED")
-
-    def municipality(self):
-        if self.thread.is_alive():
-            self.logger.info("MUNICIPALITY THREAD RUNNING")
-            self.thread.join()
-            self.logger.info("MUNICIPALITY THREAD FINISHED")
-        return self._municipality()
-
-    def _municipality(self):
-        if not data_dir.is_dir():
-            data_dir.mkdir()
-        if self.db_file.is_file():
-            db = json.loads(self.db_file.read_text(encoding="utf-8"), encoding="utf-8")
-            result = self.Result(
-                [
-                    self.City(
-                        name=city["name"],
-                        school_count=city["school_count"],
-                        schools=[
-                            self.School(
-                                id=school["id"],
-                                name=school["name"],
-                                domain=school["domain"],
-                            )
-                            for school in city["schools"]
-                        ],
-                    )
-                    for city in db["cities"]
-                ]
-            )
-            return result
-        else:
-            return self.build()
-
-    def build(self):
-        import lxml.etree as ET
-        from time import time
-
-        municipality_url = "https://sluzby.bakalari.cz/api/v1/municipality/"
-        parser = ET.XMLParser(recover=True)
-
+    @classmethod
+    @cached(cache)
+    def cities(cls) -> List["Municipality.City"]:
+        """Fetches all cities in municipality database
+        
+        :raises BakalibError: If fails to retrieve cities
+        :return: List of cities
+        :rtype: List[Municipality.City]
+        """
         try:
-            s = time()
-            municInfo = [
-                mInfo
-                for mInfo in ET.fromstring(
-                    requests.get(municipality_url, stream=True).content, parser=parser
-                ).iter("municipalityInfo")
-                if mInfo.find("name").text
+            resp = requests.get(cls.municipality_url, stream=True)
+            parsed = xmltodict.parse(resp.content)
+            return [
+                cls.City(city["name"], int(city["schoolCount"]))
+                for city in parsed["ArrayOfmunicipalityInfo"]["municipalityInfo"]
+                if city["name"]
             ]
-
-            self.logger.debug(f"CITY LIST REQUEST TOOK {time()-s}")
-
-            cities_urls = [
-                municipality_url + requests.utils.quote(city.find("name").text)
-                for city in municInfo
-                if city.find("name").text
-            ]
-
-            rs = (grequests.get(url) for url in cities_urls)
-
-            s = time()
-            cities_responses = grequests.map(rs)
-
-            self.logger.debug(f"ALL CITIES REQUESTS TOOK {time()-s}")
-
-            cities = [
-                ET.fromstring(resp.content, parser=parser).iter("schoolInfo")
-                for resp in cities_responses
-            ]
-
-            result = self.Result(
-                [
-                    self.City(
-                        mInfo.find("name").text,
-                        mInfo.find("schoolCount").text,
-                        [
-                            self.School(
-                                school.find("id").text,
-                                school.find("name").text,
-                                re.sub(
-                                    "((/)?login.aspx(/)?)?",
-                                    "",
-                                    re.sub(
-                                        "http(s)?://(www.)?",
-                                        "",
-                                        school.find("schoolUrl").text,
-                                    ),
-                                ).rstrip("/"),
-                            )
-                            for school in city
-                            if school.find("name").text
-                        ],
-                    )
-                    for mInfo, city in zip(municInfo, cities)
-                ]
-            )
-            self.logger.info("GENERATED SUCCESSFULLY")
-
         except Exception as e:
-            self.logger.error(f"{type(e)}: {e}")
-            raise BakalibError("Municipality failed to generate")
+            cls.logger.error(f"{type(e)}: {e}")
+            raise BakalibError("Failed to retrieve city list from municipality")
 
-        self.db_file.write_text(
-            json.dumps(dataclasses.asdict(result), indent=4, sort_keys=True),
-            encoding="utf-8",
-        )
-        return result
+    @classmethod
+    def schools(cls, city: str) -> List["Municipality.School"]:
+        """Fetches all schools in a specified city
+        
+        :param city: Name of a city
+        :type city: str
+        :raises BakalibError: If city not found
+        :raises BakalibError: If failed to retrieve schools
+        :return: List of schools
+        :rtype: List[Municipality.School]
+        """
+        try:
+            city_url = f"{cls.municipality_url}{city}"
+            resp = requests.get(requests.utils.requote_uri(city_url), stream=True)
+
+            if resp.status_code == 404:
+                raise BakalibError("City not found")
+
+            parsed = xmltodict.parse(resp.content)
+            schools = parsed["municipality"]["schools"]["schoolInfo"]
+            schools = schools if isinstance(schools, list) else [schools]
+
+            return [
+                cls.School(school["id"], school["name"], school["schoolUrl"])
+                for school in schools
+                if school["name"]
+            ]
+        except Exception as e:
+            cls.logger.error(f"{type(e)}: {e}")
+            raise BakalibError("Failed to retrieve school list from municipality")

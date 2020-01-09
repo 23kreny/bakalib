@@ -1,19 +1,11 @@
 """
 Modules package
 
-contents:
-
-    generic
-    grades
-    timetable
-
 """
-from ._generic import Generic as _Generic
-from .grades import Grades
-from .timetable import Timetable
+from .grades import GradesModule
+from .timetable import TimetableModule
 
 __all__ = (
-    "_Generic",
-    "Grades",
-    "Timetable",
+    "GradesModule",
+    "TimetableModule",
 )

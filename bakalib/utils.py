@@ -3,13 +3,7 @@ util
 ====
 """
 
-__all__ = (
-    "BakalibError",
-    "cache",
-    "data_dir",
-    "_logger",
-    "request",
-)
+__all__ = ("BakalibError", "Base", "cache", "_setup_logger")
 
 import datetime as _datetime
 import inspect as _inspect
@@ -18,22 +12,14 @@ import pathlib as _pathlib
 import sys as _sys
 
 import cachetools as _cachetools
-from gevent import monkey as _monkey
-
-_monkey.patch_all(thread=False, select=False)
-
 import requests as _requests
-import urllib3 as _urllib3
 import xmltodict as _xmltodict
 
-
-_urllib3.disable_warnings(_urllib3.exceptions.InsecureRequestWarning)
-
-data_dir = _pathlib.Path(__file__).parent.joinpath("data")
 _log_dir = _pathlib.Path(_pathlib.Path.home() / ".bakalib")
 _log_file = _pathlib.Path(
     _log_dir / (_datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".log")
 )
+
 
 if not _log_dir.is_dir():
     _log_dir.mkdir()
@@ -47,7 +33,14 @@ else:
 _log_file.touch()
 
 
-def _setup_logger(name):
+def _setup_logger(name: str) -> _logging.Logger:
+    """Sets up a logger with the provided name
+    
+    :param name: Name of the logger
+    :type name: str
+    :return: Ready-to-use logger
+    :rtype: _logging.Logger
+    """
     formatter = _logging.Formatter(
         fmt="%(asctime)s — %(name)s — %(levelname)s — %(message)s — %(funcName)s:%(lineno)d"
     )
@@ -61,38 +54,51 @@ def _setup_logger(name):
 
 _logger = _setup_logger("default")
 
-cache = _cachetools.TTLCache(32, 300)
-
-
-@_cachetools.cached(cache)
-def request(url: str, **kwargs: str) -> dict:
-    """
-    Make a GET request to school URL.\n
-    Module names are available at `https://github.com/bakalari-api/bakalari-api/tree/master/moduly`.
-    >>> # Valid types of requests
-    >>> request("https://example.com/login.aspx", gethx="Username123")
-    >>> request("https://example.com/login.aspx", hx="token1234=", pm="module_name", pmd="20191219") # pmd is optional
-    """
-
-    resp: _requests.Response = _requests.get(url=url, params=kwargs, verify=False)
-    parsed: dict = _xmltodict.parse(resp.content)
-    results: dict = parsed.get("results")
-
-    try:
-        res: dict = results.get("res")
-        result: dict = results.get("result")
-    except AttributeError as e:
-        log_args: dict = kwargs.copy()
-        log_args.pop(k="hx", d=None)
-        _logger.error(log_args)
-
-    comp: str = res if res else result
-
-    if not comp == "01":
-        raise BakalibError("Received response is invalid")
-
-    return results
+cache = _cachetools.LFUCache(32)
 
 
 class BakalibError(Exception):
+    """:class:`Exception` subclass, used for differentiating between Python exceptions and bakalib exceptions
+    """
+
     pass
+
+
+class Base:
+    """Base class for most of the classes present in this library
+    """
+
+    @_cachetools.cached(cache)
+    def request(self, **kwargs: str) -> dict:
+        """Generic request method
+        
+        :param gethx: Name of the client
+        :type gethx: str, optional
+        :param hx: Access token
+        :type hx: str, optional
+        :param pm: Module name
+        :type pm: str, optional
+        :param pmd: Module arguments
+        :type pmd: str, optional
+        :raises BakalibError: If received response is invalid
+        :return: Received response
+        :rtype: dict
+        """
+        resp = _requests.get(url=self.url, params=kwargs, verify=False)
+        results: dict = _xmltodict.parse(resp.content).get("results")
+
+        try:
+            res: dict = results.get("res")
+            result: dict = results.get("result")
+        except AttributeError as e:
+            log_args: dict = kwargs.copy()
+            log_args.pop(k="hx", d=None)
+            log_args.pop(k="gethx", d=None)
+            _logger.error(log_args)
+
+        comp: str = res if res else result
+
+        if not comp == "01":
+            raise BakalibError("Received response is invalid")
+
+        return results

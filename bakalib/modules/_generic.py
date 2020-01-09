@@ -3,26 +3,33 @@ generic
 =======
 """
 
-__all__ = ("Generic",)
+__all__ = ("GenericModule",)
 
 from ..core.client import Client
-from ..utils import BakalibError
+from ..utils import Base, BakalibError
 
 
-class Generic:
-    """
-    Generic module boilerplate, takes either `bakalib.client.Client` object or url and token strings.
-    >>> client = Client(username="user123", password="abcdefgh", domain="domain.example.com/bakaweb")
-    >>> module = Generic(client=client)
-    >>> module = Generic(url="domain.example.com/bakaweb", token="abcdefgh12345678")
+class GenericModule(Base):
+    """Generic module class, used by other modules.
+        
+        :param client: Instance of Client, defaults to None
+        :type client: Client, optional
+        :param url: URL of the school server, defaults to None
+        :type url: str, optional
+        :param token: Token of the client, defaults to None
+        :type token: str, optional
+        :raises BakalibError: If Client not logged in
+        :raises BakalibError: If invalid module arguments
     """
 
     url: str
     token: str
 
     def __init__(
-            self, client: Client = None, url: str = None, token: str = None
+        self, client: Client = None, url: str = None, token: str = None
     ) -> None:
+        """Constructor method
+        """
         if client:
             if not client.logged_in:
                 raise BakalibError("Client is not logged in.")
